@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Setup Guides — CRM Data Extractor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f4f8; --surface: #ffffff; --border: #e2e8f0; --border2: #cbd5e1;
+      --accent: #0ea5e9; --accent2: #0284c7;
+      --text: #0f172a; --text2: #475569; --text3: #94a3b8;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; gap: 0; height: 54px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .nav-logo { color: var(--accent2); font-weight: 900; font-size: 15px; margin-right: 32px; text-decoration: none; white-space: nowrap; }
+    .nav-link { color: var(--text2); font-size: 13px; font-weight: 600; text-decoration: none; padding: 0 14px; height: 54px; display: flex; align-items: center; border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .nav-link:hover { color: var(--text); }
+    .nav-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .nav-spacer { flex: 1; }
+    .nav-app-btn { background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; font-size: 12px; font-weight: 800; padding: 7px 16px; border-radius: 8px; text-decoration: none; white-space: nowrap; }
+    .layout { display: flex; max-width: 1100px; margin: 0 auto; padding: 40px 24px; gap: 40px; }
+    aside { width: 210px; flex-shrink: 0; }
+    .aside-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text3); margin-bottom: 10px; margin-top: 24px; }
+    .aside-title:first-child { margin-top: 0; }
+    .aside-link { display: block; padding: 7px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--text2); text-decoration: none; transition: all 0.12s; margin-bottom: 2px; }
+    .aside-link:hover { background: var(--bg); color: var(--text); }
+    .aside-link.active { background: #e0f2fe; color: var(--accent2); }
+    main { flex: 1; min-width: 0; }
+    .page-badge { display: inline-block; background: #e0f2fe; color: var(--accent2); border: 1px solid #bae6fd; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; }
+    h1 { font-size: 28px; font-weight: 900; color: var(--text); margin-bottom: 8px; }
+    .lead { font-size: 15px; color: var(--text2); line-height: 1.6; margin-bottom: 36px; }
+
+    /* ── CRM Tab nav ── */
+    .crm-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
+    .crm-tab { padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; font-weight: 700; color: var(--text2); cursor: pointer; text-decoration: none; transition: all 0.15s; }
+    .crm-tab:hover { border-color: var(--accent); color: var(--text); }
+    .crm-tab.active { background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; border-color: transparent; box-shadow: 0 2px 12px rgba(14,165,233,0.25); }
+
+    /* ── CRM sections ── */
+    .crm-section { display: none; }
+    .crm-section.active { display: block; }
+    .crm-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .crm-header-icon { font-size: 36px; }
+    .crm-header h2 { font-size: 22px; font-weight: 900; color: var(--text); }
+    .crm-header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; gap: 0; margin-bottom: 28px; }
+    .step { display: flex; gap: 16px; position: relative; }
+    .step:not(:last-child)::before { content: ''; position: absolute; left: 16px; top: 40px; width: 2px; height: calc(100% - 10px); background: linear-gradient(to bottom, #bae6fd, transparent); }
+    .step-num { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; font-size: 14px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1; margin-top: 4px; }
+    .step-body { flex: 1; padding-bottom: 24px; }
+    .step-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .step-desc { font-size: 13px; color: var(--text2); line-height: 1.65; }
+    .step-desc strong { color: var(--text); }
+    .step-desc a { color: var(--accent2); text-decoration: none; }
+    .step-desc a:hover { color: var(--accent); }
+
+    .scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+    .scope-item { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: monospace; color: var(--accent2); display: flex; align-items: center; gap: 5px; }
+    .scope-item::before { content: '✓'; color: #16a34a; font-weight: 800; font-family: inherit; }
+
+    .token-format { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; margin-top: 10px; font-family: monospace; font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+    .token-format::before { content: '📋 Token format:'; color: var(--text3); font-family: 'Segoe UI', sans-serif; font-size: 11px; white-space: nowrap; }
+
+    .warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin-top: 12px; font-size: 13px; color: #92400e; line-height: 1.5; }
+    .info-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 14px; margin-top: 12px; font-size: 13px; color: var(--text2); line-height: 1.5; }
+    .info-box strong { color: var(--accent2); }
+
+    footer { border-top: 1px solid var(--border); padding: 20px 32px; text-align: center; color: var(--text3); font-size: 12px; }
+    footer a { color: var(--accent2); text-decoration: none; font-weight: 600; }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 16px; overflow-x: auto; }
+      .nav-link { padding: 0 10px; font-size: 12px; white-space: nowrap; }
+      .nav-app-btn { font-size: 11px; padding: 6px 12px; white-space: nowrap; }
+      .layout { flex-direction: column; padding: 20px 16px; gap: 20px; }
+      aside { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+      .aside-title { width: 100%; margin-top: 10px; }
+      .aside-title:first-child { margin-top: 0; }
+      .aside-link { padding: 6px 10px; font-size: 12px; }
+      h1 { font-size: 22px; }
+      .crm-tabs { gap: 6px; }
+      .crm-tab { padding: 7px 12px; font-size: 12px; }
+      .scope-grid { grid-template-columns: 1fr; }
+      .crm-header h2 { font-size: 18px; }
+      .step-title { font-size: 14px; }
+      .token-format { flex-direction: column; align-items: flex-start; gap: 4px; }
+      footer { padding: 16px; font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">⚡ CRM Data Extractor</a>
+  <a href="/docs/" class="nav-link">Getting Started</a>
+  <a href="/docs/setup.html" class="nav-link active">CRM Setup Guides</a>
+  <a href="/docs/faq.html" class="nav-link">FAQ</a>
+  <a href="/docs/privacy.html" class="nav-link">Privacy</a>
+  <div class="nav-spacer"></div>
+  <a href="/" class="nav-app-btn">Open App →</a>
+</nav>
+
+<div class="layout">
+  <aside>
+    <div class="aside-title">Documentation</div>
+    <a href="/docs/" class="aside-link">Getting Started</a>
+    <a href="/docs/setup.html" class="aside-link active">CRM Setup Guides</a>
+    <a href="/docs/faq.html" class="aside-link">FAQ &amp; Troubleshooting</a>
+    <a href="/docs/privacy.html" class="aside-link">Privacy Policy</a>
+    <div class="aside-title">Jump to CRM</div>
+    <a href="#" class="aside-link" onclick="switchCRM('erpnext');return false;">⚙️ ERPNext</a>
+    <a href="#" class="aside-link" onclick="switchCRM('odoo');return false;">🟣 Odoo</a>
+    <a href="#" class="aside-link" onclick="switchCRM('suitecrm');return false;">🔷 SuiteCRM</a>
+    <a href="#" class="aside-link" onclick="switchCRM('espocrm');return false;">🟩 EspoCRM</a>
+    <a href="#" class="aside-link" onclick="switchCRM('dolibarr');return false;">🟦 Dolibarr</a>
+    <a href="#" class="aside-link" onclick="switchCRM('vtiger');return false;">🔶 Vtiger</a>
+  </aside>
+
+  <main>
+    <div class="page-badge">CRM Setup Guides</div>
+    <h1>API Token Setup</h1>
+    <p class="lead">Select your CRM below. Each guide shows the exact steps to get the token or credentials needed by the tool.</p>
+
+    <div class="crm-tabs">
+      <a class="crm-tab active" id="tab-erpnext"   onclick="switchCRM('erpnext');return false;"   href="#">⚙️ ERPNext</a>
+      <a class="crm-tab"       id="tab-odoo"       onclick="switchCRM('odoo');return false;"      href="#">🟣 Odoo</a>
+      <a class="crm-tab"       id="tab-suitecrm"   onclick="switchCRM('suitecrm');return false;"  href="#">🔷 SuiteCRM</a>
+      <a class="crm-tab"       id="tab-espocrm"    onclick="switchCRM('espocrm');return false;"   href="#">🟩 EspoCRM</a>
+      <a class="crm-tab"       id="tab-dolibarr"   onclick="switchCRM('dolibarr');return false;"  href="#">🟦 Dolibarr</a>
+      <a class="crm-tab"       id="tab-vtiger"     onclick="switchCRM('vtiger');return false;"    href="#">🔶 Vtiger</a>
+    </div>
+
+    <!-- ── SuiteCRM (Coming Soon) ── -->
+    <div class="crm-section" id="section-suitecrm">
+      <div class="crm-header">
+        <div class="crm-header-icon">🔷</div>
+        <div><h2>SuiteCRM</h2><p>Setup guide coming soon — currently in development</p></div>
+      </div>
+      <div class="info-box" style="margin-top:0;">
+        <strong>🚧 SuiteCRM support is in active development.</strong><br>
+        This CRM is next in line. Once tested and verified, the full setup guide and report details will appear here. Check back soon.
+      </div>
+    </div>
+
+    <!-- ── EspoCRM (Coming Soon) ── -->
+    <div class="crm-section" id="section-espocrm">
+      <div class="crm-header">
+        <div class="crm-header-icon">🟩</div>
+        <div><h2>EspoCRM</h2><p>Setup guide coming soon — currently in development</p></div>
+      </div>
+      <div class="info-box" style="margin-top:0;">
+        <strong>🚧 EspoCRM support is in active development.</strong><br>
+        Once tested and verified on a live EspoCRM instance, the full setup guide will appear here.
+      </div>
+    </div>
+
+    <!-- ── Dolibarr (Coming Soon) ── -->
+    <div class="crm-section" id="section-dolibarr">
+      <div class="crm-header">
+        <div class="crm-header-icon">🟦</div>
+        <div><h2>Dolibarr</h2><p>Setup guide coming soon — currently in development</p></div>
+      </div>
+      <div class="info-box" style="margin-top:0;">
+        <strong>🚧 Dolibarr support is in active development.</strong><br>
+        Once tested and verified on a live Dolibarr instance, the full setup guide will appear here.
+      </div>
+    </div>
+
+    <!-- ── Vtiger (Coming Soon) ── -->
+    <div class="crm-section" id="section-vtiger">
+      <div class="crm-header">
+        <div class="crm-header-icon">🔶</div>
+        <div><h2>Vtiger</h2><p>Setup guide coming soon — currently in development</p></div>
+      </div>
+      <div class="info-box" style="margin-top:0;">
+        <strong>🚧 Vtiger support is in active development.</strong><br>
+        Once tested and verified on a live Vtiger instance, the full setup guide will appear here.
+      </div>
+    </div>
+
+    <!-- ── ERPNext ── -->
+    <div class="crm-section active" id="section-erpnext">
+      <div class="crm-header">
+        <div class="crm-header-icon">⚙️</div>
+        <div><h2>ERPNext</h2><p>Uses your regular login credentials — no API key needed</p></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">Find Your ERPNext URL</div><div class="step-desc">Your ERPNext URL is what you type in the browser to access it — e.g. <strong>https://yourcompany.erpnext.com</strong> or a self-hosted address like <strong>https://erp.yourcompany.com</strong>.</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">Use Your Login Credentials</div><div class="step-desc">Enter the same <strong>username (email)</strong> and <strong>password</strong> you use to log into ERPNext daily. The tool logs in using the same session method as your browser.</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">Enter All Three Fields</div><div class="step-desc">Paste the <strong>ERPNext URL</strong>, <strong>username</strong>, and <strong>password</strong> into the three fields shown after selecting ERPNext in the tool.</div></div></div>
+      </div>
+      <div class="info-box" style="margin-top:16px;">
+        <strong>🔒 Your ERPNext permissions are fully respected.</strong><br>
+        This tool logs in as <em>you</em> — exactly like opening ERPNext in a browser tab. It can only access data your account is allowed to see. Nothing is bypassed, no special admin access is needed. If you can see a report inside ERPNext, this tool can extract it. If you can't, it won't show up here either.<br><br>
+        <strong>Works with any ERPNext login — no API key or admin rights required.</strong>
+      </div>
+      <div class="info-box" style="margin-top:10px;"><strong>Security:</strong> Your credentials are sent directly to your ERPNext server over HTTPS. They are never stored on our servers — used once to authenticate and fetch your data, then discarded immediately.</div>
+    </div>
+
+    <!-- ── Odoo ── -->
+    <div class="crm-section" id="section-odoo">
+      <div class="crm-header">
+        <div class="crm-header-icon">🟣</div>
+        <div><h2>Odoo</h2><p>Uses your regular Odoo login — no API key needed</p></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">Find Your Odoo URL</div><div class="step-desc">Your Odoo URL is what you type in the browser to open Odoo — e.g. <strong>https://yourcompany.odoo.com</strong> or a self-hosted address like <strong>https://odoo.yourcompany.com</strong>.</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">Enter Your Login Credentials</div><div class="step-desc">Enter the same <strong>email</strong> and <strong>password</strong> you use to log into Odoo daily. You also need to enter your <strong>database name</strong> — this is shown on the Odoo login page or in your URL path.</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">Find Your Database Name</div><div class="step-desc">On the Odoo login screen, the database name appears as a dropdown or pre-filled field. If your URL is <strong>https://acme.odoo.com/web</strong>, your database name is usually <strong>acme</strong>. For self-hosted Odoo, ask your admin if unsure.</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">Select Your Report</div><div class="step-desc">After entering credentials, select <strong>Full CRM Report</strong> to generate all 13 sheets — Pipeline, Stage Analysis, Salesperson, Customer-wise, Monthly Trend, 🔮 Forecast, ⏱️ Deal Velocity, Leads, Contacts, Activities, Won &amp; Lost, Raw Data, and Dashboard.</div></div></div>
+      </div>
+      <div class="info-box" style="margin-top:16px;">
+        <strong>🔒 Your Odoo permissions are fully respected.</strong><br>
+        The tool authenticates as <em>you</em> using Odoo's standard JSON-RPC login — the same method Odoo's own web interface uses. It can only access data your account is permitted to see. No admin rights required.<br><br>
+        <strong>13 sheets generated:</strong> Dashboard · Pipeline · Stage Analysis · Salesperson · Customer-wise · Monthly Trend · 🔮 Forecast · ⏱️ Deal Velocity · Leads · Contacts · Activities · Won &amp; Lost · Raw Data.
+      </div>
+      <div class="info-box" style="margin-top:10px;"><strong>Security:</strong> Your credentials are sent directly to your Odoo server over HTTPS. They are never stored on our servers — used once to authenticate and fetch your data, then discarded immediately.</div>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  Built by <a href="https://chiramalenterprises.com">Arun Chiramal</a> &nbsp;·&nbsp;
+  <a href="/docs/">Documentation</a> &nbsp;·&nbsp;
+  <a href="/docs/faq.html">FAQ</a> &nbsp;·&nbsp;
+  <a href="/">Back to App</a>
+</footer>
+
+<script>
+  function switchCRM(crm) {
+    document.querySelectorAll('.crm-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.crm-section').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('tab-' + crm).classList.add('active');
+    document.getElementById('section-' + crm).classList.add('active');
+  }
+  // Handle hash on load
+  window.onload = function() {
+    var hash = window.location.hash.replace('#', '');
+    var valid = ['erpnext','odoo','suitecrm','espocrm','dolibarr','vtiger'];
+    if (hash && valid.indexOf(hash) !== -1) switchCRM(hash);
+  };
+</script>
+</body>
+</html>
