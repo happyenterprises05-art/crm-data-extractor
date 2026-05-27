@@ -1,0 +1,29 @@
+{
+  "name": "crm-data-extractor",
+  "version": "1.0.0",
+  "description": "CRM Data Extractor — Download your CRM data as a formatted Excel report",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "exceljs": "^4.4.0",
+    "qs": "^6.11.0"
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@vitest/coverage-v8": "^4.1.7",
+    "playwright": "^1.60.0",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.7"
+  }
+}
