@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Data Extractor — Download Your CRM as Excel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080c14;
+      --bg2:       #0d1220;
+      --surface:   rgba(255,255,255,0.04);
+      --surface2:  rgba(255,255,255,0.07);
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --accent:    #3b82f6;
+      --accent2:   #60a5fa;
+      --accent3:   #1d4ed8;
+      --glow:      rgba(59,130,246,0.35);
+      --glow2:     rgba(99,102,241,0.25);
+      --green:     #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
+      --red:       #ef4444;
+      --red-dim:   rgba(239,68,68,0.12);
+      --yellow:    #f59e0b;
+      --yellow-dim:rgba(245,158,11,0.12);
+      --text:      #f1f5f9;
+      --text2:     #94a3b8;
+      --text3:     #475569;
+      --purple:    #8b5cf6;
+      --teal:      #14b8a6;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 16px 80px;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -2;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(59,130,246,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(99,102,241,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 30% at 50% 50%, rgba(20,184,166,0.06) 0%, transparent 50%);
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: -1;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* ── Hero Header ── */
+    .hero {
+      text-align: center;
+      padding: 64px 20px 48px;
+      max-width: 640px;
+      width: 100%;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 100px;
+      padding: 5px 16px 5px 10px;
+      font-size: 12px; font-weight: 600; color: var(--accent2);
+      margin-bottom: 24px;
+      letter-spacing: 0.02em;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.6; transform:scale(0.85); }
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      line-height: 1.08;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero h1 .hl {
+      background: linear-gradient(135deg, var(--accent2) 0%, var(--teal) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 16px; color: var(--text2); line-height: 1.6;
+      margin-bottom: 24px; max-width: 480px; margin-left: auto; margin-right: auto;
+    }
+    .hero-links { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+    .hero-link {
+      font-size: 13px; font-weight: 600; color: var(--accent2);
+      text-decoration: none; display: flex; align-items: center; gap: 5px;
+      opacity: 0.85; transition: opacity 0.15s;
+    }
+    .hero-link:hover { opacity: 1; }
+
+    /* ── Main card ── */
+    .card {
+      background: rgba(13,18,32,0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border2);
+      border-radius: 24px;
+      padding: 36px 32px;
+      width: 100%; max-width: 560px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 32px 80px rgba(0,0,0,0.5),
+        0 0 60px rgba(59,130,246,0.06);
+    }
+
+    /* ── Step label ── */
+    .step { margin-bottom: 28px; }
+    .step-label {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text3); margin-bottom: 14px;
+    }
+    .step-num {
+      width: 20px; height: 20px;
+      background: linear-gradient(135deg, var(--accent3), var(--accent));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+
+    /* ── License row ── */
+    .license-row { display: flex; gap: 10px; }
+    .license-row input { flex: 1; font-family: 'Courier New', monospace; }
+
+    /* ── License badge ── */
+    .license-badge {
+      display: none;
+      background: var(--green-dim);
+      border: 1px solid rgba(34,197,94,0.25);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 13px; color: var(--green);
+      margin-top: 12px; font-weight: 600;
+      display: none; align-items: center; gap: 8px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border2), transparent);
+      margin: 24px 0;
+    }
+
+    /* ── CRM Grid ── */
+    .crm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .crm-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 10px 14px;
+      text-align: center; cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+      position: relative; overflow: hidden;
+    }
+    .crm-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), transparent);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .crm-card:hover::before { opacity: 1; }
+    .crm-card:hover {
+      border-color: rgba(59,130,246,0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(59,130,246,0.15), 0 0 0 1px rgba(59,130,246,0.1);
+    }
+    .crm-card.selected {
+      border-color: var(--accent);
+      background: rgba(59,130,246,0.1);
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.3), 0 8px 32px rgba(59,130,246,0.2);
+    }
+    .crm-card.selected::before { opacity: 1; }
+    .crm-icon { font-size: 26px; margin-bottom: 8px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); }
+    .crm-name { font-size: 12px; font-weight: 700; color: var(--text2); }
+    .crm-card.selected .crm-name { color: var(--accent2); }
+    .crm-lock-badge {
+      position: absolute; top: 7px; right: 7px;
+      font-size: 10px; opacity: 0.3; pointer-events: none;
+    }
+    .crm-card.coming-soon { cursor: default; opacity: 0.4; }
+    .crm-card.coming-soon:hover { border-color: var(--border); transform: none; box-shadow: none; }
+    .crm-coming-badge {
+      display: inline-block; margin-top: 5px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.2);
+      color: var(--yellow); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 10px;
+    }
+
+    /* ── Report buttons ── */
+    .report-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .report-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px 12px; text-align: left;
+      cursor: pointer; transition: all 0.18s;
+      display: flex; align-items: center; gap: 11px;
+      color: var(--text);
+    }
+    .report-btn:hover { border-color: rgba(59,130,246,0.35); background: var(--surface2); }
+    .report-btn.selected {
+      border-color: var(--accent);
+      background: rgba(59,130,246,0.1);
+      box-shadow: 0 0 0 1px rgba(59,130,246,0.2);
+    }
+    .report-btn-icon { font-size: 20px; flex-shrink: 0; }
+    .report-btn-text { flex: 1; }
+    .report-btn-name { font-size: 13px; font-weight: 700; color: var(--text); display: block; }
+    .report-btn.selected .report-btn-name { color: var(--accent2); }
+    .report-btn-desc { font-size: 11px; color: var(--text3); margin-top: 2px; display: block; line-height: 1.4; }
+
+    /* ── Credentials ── */
+    #credFields { display: none; }
+    .cred-info {
+      background: rgba(59,130,246,0.06);
+      border: 1px solid rgba(59,130,246,0.18);
+      border-radius: 10px; padding: 12px 14px;
+      font-size: 12px; color: var(--text2);
+      margin-bottom: 14px; line-height: 1.7;
+    }
+    .cred-info a { color: var(--accent2); text-decoration: none; font-weight: 600; }
+    .cred-info a:hover { text-decoration: underline; }
+
+    /* ── Inputs ── */
+    label { display: block; font-size: 12px; color: var(--text2); margin: 12px 0 5px; font-weight: 600; }
+    input, select {
+      width: 100%; padding: 11px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border2);
+      border-radius: 10px; color: var(--text); font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+    input::placeholder { color: var(--text3); }
+    select option { background: #1e293b; color: var(--text); }
+
+    /* ── Year picker box ── */
+    #yearPickerBox label { color: var(--accent2); }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--accent3) 0%, var(--accent) 50%, #06b6d4 100%);
+      background-size: 200% 200%;
+      color: #fff; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 800; cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.25s;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35), 0 0 0 1px rgba(255,255,255,0.05) inset;
+      letter-spacing: 0.01em;
+      position: relative; overflow: hidden;
+    }
+    .btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .btn:hover::after { opacity: 1; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,0.45), 0 0 0 1px rgba(255,255,255,0.08) inset; }
+    .btn:disabled {
+      background: rgba(255,255,255,0.06); color: var(--text3);
+      cursor: not-allowed; transform: none;
+      box-shadow: none;
+    }
+    .btn-sm {
+      padding: 11px 20px; font-size: 13px; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent3), var(--accent));
+      color: #fff; border: none; border-radius: 10px; cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 2px 12px rgba(59,130,246,0.3);
+      transition: all 0.18s;
+    }
+    .btn-sm:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(59,130,246,0.4); }
+
+    /* ── Status bars ── */
+    .status-bar {
+      display: none; margin-top: 14px; padding: 12px 16px;
+      border-radius: 10px; font-size: 13px; font-weight: 600; line-height: 1.5;
+    }
+    .status-bar.ok   { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(34,197,94,0.2); }
+    .status-bar.err  { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(239,68,68,0.2); }
+    .status-bar.warn { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(245,158,11,0.2); }
+    .status-bar.info { background: rgba(59,130,246,0.08); color: var(--accent2); border: 1px solid rgba(59,130,246,0.2); }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid rgba(59,130,246,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.65s linear infinite;
+      vertical-align: middle; margin-right: 7px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Progress Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(5,8,16,0.75);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      background: rgba(13,18,32,0.95);
+      border: 1px solid var(--border2);
+      border-radius: 24px; padding: 40px 36px 28px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(59,130,246,0.08);
+      text-align: center;
+    }
+    .modal-spinner-wrap { margin-bottom: 24px; position: relative; display: inline-block; }
+    .modal-big-spinner {
+      width: 56px; height: 56px;
+      border: 3px solid rgba(59,130,246,0.12);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+      margin: 0 auto;
+    }
+    .modal-spinner-wrap::after {
+      content: '⚡';
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+    }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .modal-step { font-size: 13px; color: var(--text2); margin-bottom: 22px; min-height: 20px; }
+    .modal-bar-outer {
+      background: rgba(255,255,255,0.05);
+      border-radius: 20px; height: 4px; overflow: hidden; margin-bottom: 28px;
+    }
+    .modal-bar-inner {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent3), var(--accent), var(--teal));
+      border-radius: 20px; width: 5%;
+      transition: width 0.6s ease;
+      box-shadow: 0 0 12px rgba(59,130,246,0.5);
+    }
+    .modal-footer { border-top: 1px solid var(--border); padding-top: 14px; font-size: 11px; color: var(--text3); }
+    .modal-footer span { color: var(--accent2); font-weight: 700; }
+
+    /* ── Social proof section ── */
+    .proof-section {
+      width: 100%; max-width: 560px;
+      margin-top: 40px;
+    }
+
+    .section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.14em; color: var(--text3);
+      text-align: center; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px; justify-content: center;
+    }
+    .section-label::before, .section-label::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border2), transparent);
+    }
+
+    /* Tested cards */
+    .tested-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+      margin-bottom: 10px;
+    }
+    .tested-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 16px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .tested-card::before {
+      content: ''; position: absolute;
+      inset: 0; border-radius: inherit;
+      background: linear-gradient(135deg, rgba(59,130,246,0.06), transparent);
+    }
+    .tested-icon { font-size: 22px; margin-bottom: 8px; }
+    .tested-num {
+      font-size: 32px; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, var(--accent2), var(--teal));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tested-label { font-size: 11px; color: var(--text3); margin-top: 5px; line-height: 1.4; }
+    .tested-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 8px; font-size: 10px; font-weight: 700; color: var(--green);
+      background: var(--green-dim); border: 1px solid rgba(34,197,94,0.2);
+      border-radius: 20px; padding: 3px 10px;
+    }
+    .tested-note {
+      text-align: center; font-size: 11px; color: var(--text3); margin-top: 8px; margin-bottom: 24px;
+    }
+
+    /* Built with tags */
+    .built-row { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 16px; }
+    .built-tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 5px 12px;
+      font-size: 11px; color: var(--text2);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .built-tag span { color: var(--accent2); font-weight: 700; }
+
+    /* Trust badges */
+    .trust-badges { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .trust-badge {
+      background: var(--green-dim);
+      border: 1px solid rgba(34,197,94,0.2);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 11px; color: var(--green); font-weight: 700;
+    }
+
+    /* ── Sample downloads ── */
+    .samples-section { width: 100%; max-width: 560px; margin-top: 36px; }
+    .samples-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .sample-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 12px 16px;
+      text-align: center; text-decoration: none; color: var(--text);
+      transition: all 0.2s; display: block; position: relative; overflow: hidden;
+    }
+    .sample-card::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(59,130,246,0.07), transparent);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .sample-card:hover { border-color: rgba(59,130,246,0.4); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(59,130,246,0.15); }
+    .sample-card:hover::after { opacity: 1; }
+    .sample-icon { font-size: 26px; margin-bottom: 8px; }
+    .sample-name { font-size: 12px; font-weight: 800; color: var(--text); display: block; }
+    .sample-sheets {
+      display: inline-block; margin-top: 5px;
+      background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);
+      color: var(--accent2); font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px;
+    }
+    .sample-desc { font-size: 10px; color: var(--text3); margin-top: 6px; line-height: 1.4; }
+    .sample-dl {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 10px; font-size: 11px; font-weight: 700;
+      color: var(--accent2); letter-spacing: 0.02em;
+    }
+    .samples-note { text-align: center; font-size: 11px; color: var(--text3); margin-top: 12px; }
+
+    /* ── Footer ── */
+    .footer { margin-top: 48px; text-align: center; color: var(--text3); font-size: 12px; line-height: 2.2; }
+    .footer span { color: var(--text2); font-weight: 600; }
+    .footer a { color: var(--accent2); text-decoration: none; font-weight: 600; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* ── Toast ── */
+    #toast {
+      display: none; position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13,18,32,0.95);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 12px 24px; border-radius: 100px;
+      font-size: 13px; font-weight: 700;
+      z-index: 2000; white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03) inset;
+      backdrop-filter: blur(12px);
+    }
+
+    /* ── Step locking ── */
+    .step-locked { opacity: 0.3 !important; pointer-events: none !important; }
+
+    /* ── Mobile ── */
+    @media (max-width: 560px) {
+      .card { padding: 24px 18px; border-radius: 20px; }
+      .hero { padding: 44px 16px 36px; }
+      .hero h1 { font-size: 28px; }
+      .crm-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .crm-icon { font-size: 22px; }
+      .report-grid { grid-template-columns: 1fr; }
+      .samples-grid { grid-template-columns: 1fr; }
+      .tested-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Hero ── -->
+<div class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Live & tested with real CRM data
+  </div>
+  <h1>Turn your CRM into<br><span class="hl">a powerful Excel report</span></h1>
+  <p>Connect ERPNext or Odoo · Get 13 formatted Excel sheets · One click · No install</p>
+  <div class="hero-links">
+    <a href="/docs/" class="hero-link">📖 Setup Guides →</a>
+    <a href="#samples" class="hero-link">📥 Download Samples →</a>
+  </div>
+</div>
+
+<!-- ── Main Card ── -->
+<div class="card">
+
+  <!-- STEP 1: License -->
+  <div class="step">
+    <div class="step-label"><span class="step-num">1</span>Enter Your License Key</div>
+    <div class="license-row">
+      <input type="text" id="licenseKey" placeholder="CRM-XXXX-XXXX-XXXX"
+        style="letter-spacing:2px; font-weight:700; text-transform:uppercase;"
+        oninput="formatLicenseKey(this)"
+        onpaste="setTimeout(function(){formatLicenseKey(document.getElementById('licenseKey'));},0)">
+      <button class="btn-sm" onclick="validateLicense()">Activate</button>
+    </div>
+    <div class="license-badge" id="licenseBadge">✅ &nbsp;License active — <span id="licenseName"></span></div>
+    <div class="status-bar" id="licenseStatus"></div>
+    <div style="margin-top:10px; font-size:13px; color:var(--text2);">
+      Don't have a key?
+      <a href="#" onclick="openTrialModal(); return false;"
+         style="color:var(--accent2); text-decoration:none; font-weight:600;">
+        🎁 Start 7-Day Free Trial
+      </a>
+      &nbsp;·&nbsp;
+      <a href="https://chiramal.gumroad.com/l/CRM-Data-Extractor" target="_blank"
+         style="color:var(--green); text-decoration:none; font-weight:600;">
+        Buy License →
+      </a>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- STEP 2: CRM -->
+  <div class="step" id="stepCRM" style="opacity:0.3; pointer-events:none;" title="Activate your license key first">
+    <div class="step-label"><span class="step-num">2</span>Select Your CRM</div>
+    <div class="crm-grid">
+      <div class="crm-card" onclick="selectCRM('erpnext')" id="crm-erpnext">
+        <div class="crm-icon">⚙️</div>
+        <div class="crm-name">ERPNext</div>
+        <span class="crm-lock-badge">🔒</span>
+      </div>
+      <div class="crm-card" onclick="selectCRM('odoo')" id="crm-odoo">
+        <div class="crm-icon">🟣</div>
+        <div class="crm-name">Odoo</div>
+        <span class="crm-lock-badge">🔒</span>
+      </div>
+      <div class="crm-card coming-soon" id="crm-suiteCRM" title="Coming soon">
+        <div class="crm-icon">🔷</div>
+        <div class="crm-name">SuiteCRM</div>
+        <div class="crm-coming-badge">Soon</div>
+      </div>
+      <div class="crm-card coming-soon" id="crm-espocrm" title="Coming soon">
+        <div class="crm-icon">🟩</div>
+        <div class="crm-name">EspoCRM</div>
+        <div class="crm-coming-badge">Soon</div>
+      </div>
+      <div class="crm-card coming-soon" id="crm-dolibarr" title="Coming soon">
+        <div class="crm-icon">🟦</div>
+        <div class="crm-name">Dolibarr</div>
+        <div class="crm-coming-badge">Soon</div>
+      </div>
+      <div class="crm-card coming-soon" id="crm-vtiger" title="Coming soon">
+        <div class="crm-icon">🔶</div>
+        <div class="crm-name">Vtiger</div>
+        <div class="crm-coming-badge">Soon</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- STEP 3: Report Type -->
+  <div class="step" id="stepReport" style="opacity:0.3; pointer-events:none;">
+    <div class="step-label"><span class="step-num">3</span>Select Report Type</div>
+    <div class="report-grid" id="reportGrid"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- STEP 4: Credentials -->
+  <div class="step" id="stepCreds" style="opacity:0.3; pointer-events:none;">
+    <div class="step-label"><span class="step-num">4</span>Enter Credentials</div>
+    <div id="credFields"></div>
+    <div id="yearPickerBox" style="display:none;margin-top:16px;">
+      <label>📅 Report Year</label>
+      <select id="fiscalYearSelect"></select>
+      <div id="yearPickerHint" style="font-size:11px;color:var(--text3);margin-top:6px;">Sales and Audit reports will cover 01 Jan – 31 Dec of the selected year.</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- STEP 5: Extract -->
+  <div id="stepExtract" style="opacity:0.3; pointer-events:none;">
+    <button class="btn" id="extractBtn" onclick="extractCRM()" disabled>
+      ⬇️ &nbsp; Extract &amp; Download Excel
+    </button>
+    <div class="status-bar" id="extractStatus"></div>
+  </div>
+
+</div>
+
+<!-- ── Social Proof ── -->
+<div class="proof-section">
+  <div class="section-label">✅ Tested &amp; Verified</div>
+  <div class="tested-grid">
+    <div class="tested-card">
+      <div class="tested-icon">⚙️</div>
+      <div class="tested-num">13</div>
+      <div class="tested-label">Excel Sheets<br>ERPNext (Sales)</div>
+      <div class="tested-badge"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;"></span> Live Tested</div>
+    </div>
+    <div class="tested-card">
+      <div class="tested-icon">🟣</div>
+      <div class="tested-num">13</div>
+      <div class="tested-label">Excel Sheets<br>Odoo CRM</div>
+      <div class="tested-badge"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;"></span> Live Tested</div>
+    </div>
+  </div>
+  <div class="tested-note">More open-source CRMs being added and tested — only verified ones listed here.</div>
+
+  <div class="section-label">🔧 Built With</div>
+  <div class="built-row">
+    <div class="built-tag"><span>Node.js</span> v20</div>
+    <div class="built-tag"><span>ExcelJS</span> Engine</div>
+    <div class="built-tag"><span>Vercel</span> Serverless</div>
+    <div class="built-tag"><span>REST APIs</span> Direct</div>
+    <div class="built-tag"><span>Google Apps Script</span> License</div>
+  </div>
+  <div class="trust-badges">
+    <div class="trust-badge">🔒 Credentials never stored</div>
+    <div class="trust-badge">🌐 HTTPS encrypted</div>
+    <div class="trust-badge">⚡ No install required</div>
+    <div class="trust-badge">🗂️ 13 Excel sheets</div>
+    <div class="trust-badge">🧪 115 Tests Passing</div>
+    <div class="trust-badge">🖥️ Desktop &amp; Mobile Verified</div>
+  </div>
+</div>
+
+<!-- ── Sample Downloads ── -->
+<div class="samples-section" id="samples">
+  <div class="section-label">📥 Download Sample Reports</div>
+  <div class="samples-grid">
+    <a class="sample-card" href="/samples/sample_erpnext_sales.xlsx" download>
+      <div class="sample-icon">📊</div>
+      <span class="sample-name">ERPNext Sales</span>
+      <div class="sample-sheets">11 sheets</div>
+      <div class="sample-desc">Month-wise · Brand-wise · Salesperson · Pivot · Raw Data</div>
+      <div class="sample-dl">⬇ Download .xlsx</div>
+    </a>
+    <a class="sample-card" href="/samples/sample_erpnext_stock.xlsx" download>
+      <div class="sample-icon">📦</div>
+      <span class="sample-name">ERPNext Stock</span>
+      <div class="sample-sheets">13 sheets</div>
+      <div class="sample-desc">Summary · By Brand · By Category · Per-brand tabs</div>
+      <div class="sample-dl">⬇ Download .xlsx</div>
+    </a>
+    <a class="sample-card" href="/samples/sample_odoo_full.xlsx" download>
+      <div class="sample-icon">🟣</div>
+      <span class="sample-name">Odoo CRM</span>
+      <div class="sample-sheets">13 sheets</div>
+      <div class="sample-desc">Pipeline · Forecast · Deal Velocity · Salesperson · Monthly</div>
+      <div class="sample-dl">⬇ Download .xlsx</div>
+    </a>
+  </div>
+  <div class="samples-note">Free to preview — no license needed · Open in Excel or Google Sheets</div>
+</div>
+
+<!-- ── Footer ── -->
+<div class="footer">
+  Made with ❤️ by <span>Arun Chiramal</span> — Full Stack Developer<br>
+  <span>Your credentials are never stored · All data fetched securely in real-time</span><br>
+  <a href="/docs/">Documentation</a> &nbsp;·&nbsp;
+  <a href="/docs/privacy.html">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="https://chiramalenterprises.com" target="_blank">chiramalenterprises.com</a>
+</div>
+
+<!-- ── Progress Modal ── -->
+<div class="modal-overlay" id="progressModal">
+  <div class="modal-box">
+    <div class="modal-spinner-wrap">
+      <div class="modal-big-spinner"></div>
+    </div>
+    <div class="modal-title" id="modalTitle">Preparing your report…</div>
+    <div class="modal-step" id="modalStep">Initialising connection…</div>
+    <div class="modal-bar-outer">
+      <div class="modal-bar-inner" id="modalBar"></div>
+    </div>
+    <div class="modal-footer">
+      Developed by <span>Arun Chiramal</span> — Full Stack Developer
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  var selectedCRM    = '';
+  var selectedReport = '';
+  var licenseValid   = false;
+  var licenseHWID    = getBrowserId();
+
+  window.addEventListener('DOMContentLoaded', function() {
+    var sel = document.getElementById('fiscalYearSelect');
+    if (sel) sel.innerHTML = buildYearOptions();
+  });
+
+  function getBrowserId() {
+    var nav = window.navigator;
+    var str = [nav.userAgent, nav.language, screen.width, screen.height, new Date().getTimezoneOffset()].join('|');
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
+    return 'BID-' + Math.abs(hash).toString(36).toUpperCase();
+  }
+
+  function formatLicenseKey(input) {
+    var raw   = input.value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    var parts = [];
+    var prefix = raw.startsWith('CRM') ? 'CRM' : raw.startsWith('CI') ? 'CI' : '';
+    if (!prefix) { input.value = raw.substring(0, 18); return; }
+    var rest = raw.substring(prefix.length);
+    parts.push(prefix);
+    for (var i = 0; i < rest.length && parts.length < 4; i += 4) { parts.push(rest.substring(i, i + 4)); }
+    var formatted = parts.join('-');
+    var max = prefix === 'CRM' ? 18 : 17;
+    input.value = formatted.substring(0, max);
+  }
+
+  async function validateLicense() {
+    var key = document.getElementById('licenseKey').value.trim().toUpperCase();
+    var statusEl = document.getElementById('licenseStatus');
+    var validCI  = key.length === 17 && key.startsWith('CI-');
+    var validCRM = key.length === 18 && key.startsWith('CRM-');
+    if (!validCI && !validCRM) { showStatus(statusEl, 'err', '❌ Invalid format. Enter CRM-XXXX-XXXX-XXXX'); return; }
+    var cached = localStorage.getItem('crm_license');
+    if (cached) {
+      try {
+        var c = JSON.parse(cached);
+        if (c.key === key && c.expiry && new Date(c.expiry) > new Date()) { activateLicense(key, c.name); return; }
+      } catch(e) {}
+    }
+    showStatus(statusEl, 'info', '<span class="spinner"></span>Validating license…');
+    try {
+      var res  = await fetch('/api/validate-license?key=' + encodeURIComponent(key) + '&hwid=' + encodeURIComponent(licenseHWID));
+      var data = await res.json();
+      if (data.valid) {
+        localStorage.setItem('crm_license', JSON.stringify({ key, name: data.name || 'User', expiry: data.expiry || '' }));
+        activateLicense(key, data.name || 'User');
+      } else {
+        var msg = data.message || 'License invalid or expired.';
+        var isExpired = msg.toLowerCase().includes('expired');
+        var html = '❌ ' + msg;
+        if (isExpired) {
+          html += '&nbsp;&nbsp;<a href="https://chiramal.gumroad.com/l/CRM-Data-Extractor" target="_blank" '
+                + 'style="display:inline-block;background:#22c55e;color:#fff;padding:5px 14px;border-radius:6px;'
+                + 'font-weight:700;font-size:12px;text-decoration:none;margin-left:4px;">Buy Now →</a>';
+        }
+        showStatus(statusEl, 'err', html);
+      }
+    } catch (e) { activateLicense(key, 'User (Offline Mode)'); }
+  }
+
+  function activateLicense(key, name) {
+    licenseValid = true;
+    document.getElementById('licenseStatus').style.display = 'none';
+    var badge = document.getElementById('licenseBadge');
+    badge.style.display = 'flex';
+    document.getElementById('licenseName').innerText = name;
+    document.getElementById('licenseKey').disabled = true;
+    unlockStep('stepCRM');
+    toast('✅ License activated!');
+  }
+
+  function selectCRM(crm) {
+    var card = document.getElementById('crm-' + crm);
+    if (!card || card.classList.contains('coming-soon')) return;
+    selectedCRM = crm; selectedReport = '';
+    document.querySelectorAll('.crm-card').forEach(function(c) { c.classList.remove('selected'); });
+    card.classList.add('selected');
+    buildReportTypes(crm);
+    unlockStep('stepReport');
+    lockStep('stepCreds'); lockStep('stepExtract');
+    document.getElementById('extractBtn').disabled = true;
+    document.getElementById('credFields').style.display = 'none';
+    document.getElementById('credFields').innerHTML = '';
+    document.getElementById('extractStatus').style.display = 'none';
+  }
+
+  var reportTypes = {
+    erpnext:    [
+      { id:'sales',      icon:'💰', name:'Sales Report',              desc:'11 sheets — Revenue, Brand, Salesperson, Pivot & more' },
+      { id:'stock',      icon:'📦', name:'Stock Report',              desc:'13 sheets — Per-brand tabs, low-stock, category breakdown' },
+      { id:'audit',      icon:'🔍', name:'Audit Report',              desc:'7 sheets — 6 risk checks on your sales data' },
+      { id:'full',       icon:'📊', name:'Full CRM Report',           desc:'Opportunities, leads, contacts from ERPNext CRM' },
+    ],
+    odoo:       [
+      { id:'pipeline',   icon:'🔵', name:'Sales Pipeline Report',     desc:'9 sheets — Pipeline, Forecast, Deal Velocity, Stage Analysis, Salesperson, Won & Lost' },
+      { id:'leads',      icon:'🟡', name:'Leads & Contacts Report',   desc:'4 sheets — Leads summary, Source analysis, Contacts list' },
+      { id:'activities', icon:'📅', name:'Activity Report',           desc:'4 sheets — All activities, Overdue tasks, Activity by user' },
+    ],
+  };
+
+  function buildReportTypes(crm) {
+    var types = reportTypes[crm] || [];
+    var html = '';
+    types.forEach(function(r) {
+      html += '<button class="report-btn" id="rep-'+r.id+'" onclick="selectReport(\''+r.id+'\')">'+
+        '<div class="report-btn-icon">'+r.icon+'</div>'+
+        '<div class="report-btn-text">'+
+          '<span class="report-btn-name">'+r.name+'</span>'+
+          '<span class="report-btn-desc">'+r.desc+'</span>'+
+        '</div></button>';
+    });
+    document.getElementById('reportGrid').innerHTML = html;
+  }
+
+  function selectReport(rep) {
+    selectedReport = rep;
+    document.querySelectorAll('.report-btn').forEach(function(b) { b.classList.remove('selected'); });
+    var el = document.getElementById('rep-' + rep);
+    if (el) el.classList.add('selected');
+    buildCredFields(selectedCRM);
+    maybeShowYearPicker();
+    unlockStep('stepCreds'); unlockStep('stepExtract');
+    document.getElementById('extractBtn').disabled = false;
+  }
+
+  function maybeShowYearPicker() {
+    var box = document.getElementById('yearPickerBox');
+    if (!box) return;
+    var erpnextYearReports = ['sales', 'audit'];
+    var odooYearReports    = ['pipeline', 'activities'];
+    var show = (selectedCRM === 'erpnext' && erpnextYearReports.indexOf(selectedReport) !== -1) ||
+               (selectedCRM === 'odoo'    && odooYearReports.indexOf(selectedReport)    !== -1);
+    box.style.display = show ? 'block' : 'none';
+    var hint = document.getElementById('yearPickerHint');
+    if (hint) {
+      hint.innerText = selectedCRM === 'odoo'
+        ? 'Pipeline and Activity reports will filter records by the selected year.'
+        : 'Sales and Audit reports will cover 01 Jan – 31 Dec of the selected year.';
+    }
+  }
+
+  function buildYearOptions() {
+    var cur = new Date().getFullYear(); var opts = '';
+    for (var y = cur; y >= cur - 5; y--) {
+      opts += '<option value="' + y + '"' + (y === cur ? ' selected' : '') + '>' + y + ' (Jan – Dec)</option>';
+    }
+    return opts;
+  }
+
+  var credConfigs = {
+    hubspot:    { info: 'Get your token: <a href="https://app.hubspot.com" target="_blank">HubSpot → Settings → Integrations → Private Apps</a>. <a href="/docs/setup.html#hubspot" target="_blank">Full guide →</a>', fields: [{ id:'apiKey', label:'HubSpot Private App Token', placeholder:'pat-na1-xxxxxxxx...' }] },
+    erpnext:    { info: 'Your ERPNext URL and login credentials — no API key needed. <a href="/docs/setup.html#erpnext" target="_blank">Full guide →</a><br><br><span style="display:block;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 12px;font-size:12px;color:#4ade80;margin-top:6px;">🔒 <strong>Your ERPNext permissions are fully respected.</strong> This tool logs in as you — exactly like opening ERPNext in a browser. Nothing is bypassed.</span>', fields: [{ id:'domain', label:'ERPNext URL', placeholder:'https://yoursite.erpnext.com', hint:'Base URL only — e.g. https://yoursite.erpnext.com (no page path after the domain)' }, { id:'username', label:'Username / Email', placeholder:'john@yourcompany.com' }, { id:'password', label:'Password', placeholder:'••••••••', type:'password' }] },
+    odoo:       { info: 'Your Odoo URL, database name and login — no API key needed.<br><br><span style="display:block;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 12px;font-size:12px;color:#4ade80;margin-top:6px;">🔒 <strong>Your Odoo permissions are fully respected.</strong> Works with Odoo Cloud and self-hosted instances on any version (14–17).</span>', fields: [{ id:'domain', label:'Odoo URL', placeholder:'https://mycompany.odoo.com' }, { id:'database', label:'Database Name', placeholder:'mycompany (or leave blank to auto-detect)' }, { id:'username', label:'Username / Email', placeholder:'john@mycompany.com' }, { id:'password', label:'Password', placeholder:'••••••••', type:'password' }] },
+  };
+
+  function buildCredFields(crm) {
+    var cfg = credConfigs[crm]; if (!cfg) return;
+    var html = '<div class="cred-info">' + cfg.info + '</div>';
+    cfg.fields.forEach(function(f) {
+      html += '<label>' + f.label + '</label>';
+      html += '<input type="' + (f.type || 'text') + '" id="cred_' + f.id + '" placeholder="' + f.placeholder + '">';
+      if (f.hint) html += '<div style="font-size:11px;color:#64748b;margin:4px 0 10px 4px;padding:6px 10px;background:rgba(251,191,36,0.07);border-left:2px solid #f59e0b;border-radius:0 4px 4px 0;">⚠️ ' + f.hint + '</div>';
+    });
+    document.getElementById('credFields').innerHTML = html;
+    document.getElementById('credFields').style.display = 'block';
+  }
+
+  async function extractCRM() {
+    if (!licenseValid)   { toast('❌ Please activate your license first.'); return; }
+    if (!selectedCRM)    { toast('❌ Please select a CRM.'); return; }
+    if (!selectedReport) { toast('❌ Please select a report type.'); return; }
+
+    var btn = document.getElementById('extractBtn');
+    var statusEl = document.getElementById('extractStatus');
+    btn.disabled = true; statusEl.style.display = 'none';
+
+    var crmLabel = { erpnext:'ERPNext', odoo:'Odoo' }[selectedCRM] || selectedCRM;
+    document.getElementById('modalTitle').innerText = 'Fetching ' + crmLabel + ' data…';
+    document.getElementById('progressModal').classList.add('show');
+
+    var steps = ['Connecting to ' + crmLabel + '…', 'Authenticating…', 'Fetching records…', 'Processing data…', 'Building Excel report…', 'Preparing download…'];
+    var stepIdx = 0; var pct = 5;
+    var bar = document.getElementById('modalBar');
+    var stepEl = document.getElementById('modalStep');
+    stepEl.innerText = steps[0]; bar.style.width = pct + '%';
+
+    var pInterval = setInterval(function() {
+      pct = Math.min(pct + 12, 88); bar.style.width = pct + '%';
+      if (stepIdx < steps.length - 1) { stepIdx++; stepEl.innerText = steps[stepIdx]; }
+    }, 1400);
+
+    try {
+      var cfg = credConfigs[selectedCRM];
+      var body = { crm: selectedCRM, reportType: selectedReport };
+      cfg.fields.forEach(function(f) { var el = document.getElementById('cred_' + f.id); if (el) body[f.id] = el.value.trim(); });
+      var yrSel = document.getElementById('fiscalYearSelect');
+      if (yrSel && yrSel.closest('#yearPickerBox').style.display !== 'none') { body.fiscalYear = parseInt(yrSel.value, 10); }
+
+      var res = await fetch('/api/fetch-crm', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      clearInterval(pInterval);
+
+      if (!res.ok) {
+        var errData = await res.json().catch(function() { return { error:'Unknown server error.' }; });
+        var errMsg = errData.error || 'Server error ' + res.status;
+        if (res.status === 401) errMsg = '❌ Authentication failed (401). Token invalid or expired.';
+        else if (res.status === 403) errMsg = '❌ Access denied (403). Token missing required permissions.';
+        else if (res.status === 429) errMsg = '❌ Rate limit hit (429). Wait 60 seconds and try again.';
+        else if (res.status === 504 || res.status === 524) errMsg = '❌ Timeout. Try a focused sub-report instead of Full Report.';
+        else if (errData.error) errMsg = '❌ ' + errData.error;
+        throw new Error(errMsg);
+      }
+
+      var warnings = res.headers.get('X-CRM-Warnings');
+      bar.style.width = '100%'; stepEl.innerText = 'Download starting…';
+
+      var blob = await res.blob();
+      var cd = res.headers.get('Content-Disposition') || '';
+      var fname = 'CRM_Report.xlsx';
+      var m = cd.match(/filename="([^"]+)"/); if (m) fname = m[1];
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setTimeout(function() {
+        document.getElementById('progressModal').classList.remove('show');
+        if (warnings) {
+          showStatus(statusEl, 'warn', '⚠️ Downloaded with warnings: ' + warnings + '. Check the Warnings sheet in your Excel file.');
+          toast('⚠️ Downloaded with warnings');
+        } else {
+          showStatus(statusEl, 'ok', '✅ Excel downloaded successfully! Check your Downloads folder.');
+          toast('✅ Report downloaded!');
+        }
+        btn.disabled = false;
+      }, 800);
+
+    } catch (err) {
+      clearInterval(pInterval);
+      document.getElementById('progressModal').classList.remove('show');
+      var msg = err.message || 'Something went wrong. Check your credentials and try again.';
+      if (!msg.startsWith('❌') && !msg.startsWith('⚠️')) msg = '❌ ' + msg;
+      showStatus(statusEl, 'err', msg);
+      btn.disabled = false;
+    }
+  }
+
+  function unlockStep(id) {
+    var el = document.getElementById(id); if (!el) return;
+    el.style.opacity = '1'; el.style.pointerEvents = 'auto'; el.removeAttribute('title');
+    el.querySelectorAll('.crm-lock-badge').forEach(function(b) { b.style.display = 'none'; });
+  }
+  function lockStep(id) {
+    var el = document.getElementById(id); if (!el) return;
+    el.style.opacity = '0.3'; el.style.pointerEvents = 'none';
+    el.querySelectorAll('.crm-lock-badge').forEach(function(b) { b.style.display = ''; });
+  }
+  function showStatus(el, type, msg) { el.className = 'status-bar ' + type; el.innerHTML = msg; el.style.display = 'block'; }
+  function toast(msg) { var el = document.getElementById('toast'); el.innerText = msg; el.style.display = 'block'; setTimeout(function() { el.style.display = 'none'; }, 2800); }
+
+  window.onload = function() {
+    var cached = localStorage.getItem('crm_license');
+    if (cached) {
+      try {
+        var c = JSON.parse(cached);
+        if (c.key && c.expiry && new Date(c.expiry) > new Date()) { document.getElementById('licenseKey').value = c.key; activateLicense(c.key, c.name || 'User'); }
+      } catch(e) {}
+    }
+  };
+  // ── Trial Modal ──────────────────────────────────────────────
+  function toggleTrialBtn() {
+    var checked = document.getElementById('trialTerms').checked;
+    var btn = document.getElementById('trialBtn');
+    btn.disabled = !checked;
+    btn.style.opacity = checked ? '1' : '0.4';
+    btn.style.cursor  = checked ? 'pointer' : 'not-allowed';
+  }
+  function openTrialModal() {
+    document.getElementById('trialModal').style.display = 'flex';
+    // Reset T&C checkbox and button state each time modal opens
+    var cb = document.getElementById('trialTerms');
+    if (cb) { cb.checked = false; toggleTrialBtn(); }
+    document.getElementById('trialName').focus();
+  }
+  function closeTrialModal() {
+    document.getElementById('trialModal').style.display = 'none';
+    document.getElementById('trialStatus').innerHTML = '';
+    document.getElementById('trialName').value = '';
+    document.getElementById('trialEmail').value = '';
+    var cb = document.getElementById('trialTerms');
+    if (cb) { cb.checked = false; toggleTrialBtn(); }
+  }
+  async function submitTrial() {
+    var name  = document.getElementById('trialName').value.trim();
+    var email = document.getElementById('trialEmail').value.trim();
+    var statusEl = document.getElementById('trialStatus');
+    if (!name || !email) { statusEl.innerHTML = '<span style="color:var(--red)">Please enter your name and email.</span>'; return; }
+    statusEl.innerHTML = '<span class="spinner"></span> Sending your trial key…';
+    document.getElementById('trialBtn').disabled = true;
+    try {
+      var res  = await fetch('/api/start-trial', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, email }) });
+      var data = await res.json();
+      if (data.ok) {
+        statusEl.innerHTML = '<span style="color:var(--green)">✅ Trial key sent! Check your inbox (and spam folder).</span>';
+        document.getElementById('trialBtn').disabled = false;
+        setTimeout(closeTrialModal, 3000);
+      } else {
+        statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + (data.message || 'Something went wrong.') + '</span>';
+        document.getElementById('trialBtn').disabled = false;
+      }
+    } catch(e) {
+      statusEl.innerHTML = '<span style="color:var(--red)">❌ Network error. Please try again.</span>';
+      document.getElementById('trialBtn').disabled = false;
+    }
+  }
+  // Close modal on backdrop click
+  document.getElementById('trialModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTrialModal();
+  });
+  // Enter key submits
+  document.getElementById('trialEmail').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') submitTrial();
+  });
+</script>
+
+<!-- ── Trial Modal ── -->
+<div id="trialModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#0d1220; border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:32px; max-width:420px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <div style="font-size:20px; font-weight:700; color:#f1f5f9;">🎁 Start Free Trial</div>
+        <div style="font-size:13px; color:#94a3b8; margin-top:4px;">7 days · Full access · No credit card</div>
+      </div>
+      <button onclick="closeTrialModal()" style="background:none; border:none; color:#94a3b8; font-size:22px; cursor:pointer; line-height:1;">×</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <input id="trialName" type="text" placeholder="Your name" maxlength="80"
+        style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:11px 14px; color:#f1f5f9; font-size:14px; font-family:inherit; outline:none;">
+      <input id="trialEmail" type="email" placeholder="your@email.com" maxlength="120"
+        style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:11px 14px; color:#f1f5f9; font-size:14px; font-family:inherit; outline:none;">
+      <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px;">
+        <input type="checkbox" id="trialTerms" onchange="toggleTrialBtn()"
+          style="margin-top:2px; accent-color:#3b82f6; width:15px; height:15px; flex-shrink:0; cursor:pointer;">
+        <span style="font-size:12.5px; color:#94a3b8; line-height:1.5;">
+          I have read and agree to the
+          <a href="/terms.html" target="_blank" style="color:#60a5fa; text-decoration:underline;">Terms &amp; Conditions</a>
+        </span>
+      </label>
+      <button id="trialBtn" onclick="submitTrial()" disabled
+        style="background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:700; font-family:inherit; opacity:0.4; cursor:not-allowed; transition:opacity 0.2s;">
+        Send My Trial Key
+      </button>
+      <div id="trialStatus" style="font-size:13px; min-height:20px; text-align:center;"></div>
+    </div>
+    <div style="margin-top:16px; font-size:12px; color:#475569; text-align:center;">
+      Trial key will be emailed instantly. After 7 days,
+      <a href="https://chiramal.gumroad.com/l/CRM-Data-Extractor" target="_blank" style="color:#60a5fa;">purchase a full license</a> to continue.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
