@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Intelligence — 7-Day Free Trial</title>
+  <meta name="description" content="Try Contact Intelligence free for 7 days. Auto-extracts contacts from Outlook and enriches them with AI." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0a0a1a;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(99,102,241,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.12) 0%, transparent 60%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 44px 40px;
+      max-width: 460px;
+      width: 100%;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+    }
+
+    .logo-text h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text p {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      color: #a5b4fc;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    h2 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 0.92rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .features {
+      list-style: none;
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .features li {
+      font-size: 0.88rem;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .features li::before {
+      content: '✓';
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      background: rgba(34,197,94,0.15);
+      color: #4ade80;
+      border-radius: 50%;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      margin: 24px 0;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 0.95rem;
+      color: #f1f5f9;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 16px;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus {
+      border-color: rgba(99,102,241,0.6);
+      background: rgba(99,102,241,0.06);
+    }
+
+    input::placeholder { color: #475569; }
+
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 20px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      text-align: center;
+      display: none;
+      line-height: 1.5;
+    }
+
+    #status.success {
+      background: rgba(34,197,94,0.12);
+      border: 1px solid rgba(34,197,94,0.25);
+      color: #86efac;
+      display: block;
+    }
+
+    #status.error {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #fca5a5;
+      display: block;
+    }
+
+    .buy-link {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.84rem;
+      color: #64748b;
+    }
+
+    .buy-link a {
+      color: #a5b4fc;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .buy-link a:hover { text-decoration: underline; }
+
+    .footer {
+      margin-top: 32px;
+      font-size: 0.75rem;
+      color: #334155;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 32px 24px; }
+      h2 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo-row">
+    <div class="logo-icon">🧠</div>
+    <div class="logo-text">
+      <h1>Contact Intelligence</h1>
+      <p>Outlook Contact Extractor · AI-Powered</p>
+    </div>
+  </div>
+
+  <div class="badge">🎁 7-Day Free Trial</div>
+
+  <h2>Extract contacts from<br>Outlook — automatically</h2>
+
+  <p class="subtitle">
+    Drop your email below. We'll send you a license key instantly — no credit card, no signup required.
+  </p>
+
+  <ul class="features">
+    <li>Scans your Outlook inbox for business contacts</li>
+    <li>AI-enriches names, companies, and roles</li>
+    <li>Exports clean Excel report in one click</li>
+    <li>Runs silently on Windows — no browser needed</li>
+    <li>Full 7-day access, then buy if you love it</li>
+  </ul>
+
+  <hr class="divider" />
+
+  <label for="name">Your Name</label>
+  <input type="text" id="name" placeholder="e.g. Ahmed Al-Rashid" maxlength="80" autocomplete="name" />
+
+  <label for="email">Work Email</label>
+  <input type="email" id="email" placeholder="you@company.com" maxlength="100" autocomplete="email" />
+
+  <button class="btn" id="submitBtn" onclick="submitTrial()">
+    <span class="spinner" id="spinner"></span>
+    <span id="btnText">Get My Free Trial Key →</span>
+  </button>
+
+  <div id="status"></div>
+
+  <div class="buy-link">
+    Already have a key? <a href="https://chiramal.gumroad.com/l/contact-intelligence" target="_blank">Buy full license →</a>
+  </div>
+</div>
+
+<div class="footer">Made with love by Arun Chiramal</div>
+
+<script>
+  async function submitTrial() {
+    const name  = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const btn   = document.getElementById('submitBtn');
+    const spin  = document.getElementById('spinner');
+    const txt   = document.getElementById('btnText');
+    const status = document.getElementById('status');
+
+    status.className = '';
+    status.style.display = 'none';
+    status.textContent = '';
+
+    if (!name) return showStatus('error', 'Please enter your name.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showStatus('error', 'Please enter a valid email address.');
+
+    btn.disabled = true;
+    spin.style.display = 'block';
+    txt.textContent = 'Sending your key…';
+
+    try {
+      const res  = await fetch('/api/start-ci-trial', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, email }),
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        showStatus('success', '🎉 ' + data.message);
+        document.getElementById('name').value  = '';
+        document.getElementById('email').value = '';
+        txt.textContent = 'Key Sent!';
+      } else {
+        showStatus('error', data.message || 'Something went wrong. Please try again.');
+        btn.disabled = false;
+        txt.textContent = 'Get My Free Trial Key →';
+      }
+    } catch (err) {
+      showStatus('error', 'Network error. Please check your connection and try again.');
+      btn.disabled = false;
+      txt.textContent = 'Get My Free Trial Key →';
+    } finally {
+      spin.style.display = 'none';
+    }
+  }
+
+  function showStatus(type, msg) {
+    const el = document.getElementById('status');
+    el.className = type;
+    el.textContent = msg;
+  }
+
+  // Allow Enter key to submit
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitTrial();
+  });
+</script>
+
+</body>
+</html>
