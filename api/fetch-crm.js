@@ -449,15 +449,15 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
 
     rows.sort((a, b) => (a.date < b.date ? -1 : 1));
 
-    // 4. Derive invoices list from rows
+    // 4. Derive invoice summary list from rows
     const invAgg = {};
     rows.forEach(r => {
       if (!invAgg[r.invoice_no]) invAgg[r.invoice_no] = { name: r.invoice_no, customer: r.customer, posting_date: r.date, salesperson: r.salesperson, total: 0 };
       invAgg[r.invoice_no].total += r.amount;
     });
-    const invoices = Object.values(invAgg);
+    const invoiceSummary = Object.values(invAgg);
 
-    return { crmName: 'ERPNext', reportType: 'sales', warnings, rows, invoices, periodYear: yr };
+    return { crmName: 'ERPNext', reportType: 'sales', warnings, rows, invoices: invoiceSummary, periodYear: yr };
   }
 
   // ── STOCK REPORT ─────────────────────────────────────────────
