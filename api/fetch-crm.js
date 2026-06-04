@@ -77,14 +77,14 @@ function cellStyle(bgHex, bold = false, align = 'left') {
     border:    thinBorder(),
   };
 }
-// DD MMM YYYY — Arun's standard for every date in every sheet
+// DD MM YYYY — Arun's standard for every date in every sheet
 function toStdDate(val) {
   if (!val) return '';
   const d = (val instanceof Date) ? val : new Date(val);
   if (isNaN(d)) return String(val);
-  const dd  = String(d.getDate()).padStart(2, '0');
-  const mmm = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
-  return `${dd} ${mmm} ${d.getFullYear()}`;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd} ${mm} ${d.getFullYear()}`;
 }
 function fmtDate() {
   return toStdDate(new Date());
@@ -445,7 +445,7 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
     });
     const invoiceSummary = Object.values(invAgg);
 
-    return { crmName: 'ERPNext', reportType: 'sales', warnings, rows, invoices: invoiceSummary, periodYear: yr };
+    return { crmName: 'ERPNext', reportType: 'sales', warnings, rows, invoices: invoiceSummary, periodYear: yr, toDate, fromDate };
   }
 
   // ── STOCK REPORT ─────────────────────────────────────────────
@@ -1102,7 +1102,9 @@ function erpBuildSalesSummary(wb, data) {
   const uniqueInvoices = new Set(rows.map(r=>r.invoice_no)).size;
   const months = [...new Set(rows.map(r=>r.month_key))].sort();
   const yr = data.periodYear;
-  const periodLabel = yr ? `01 Jan ${yr} – 31 Dec ${yr}` : (months.length ? `${months[0]} to ${months[months.length-1]}` : fmtDate());
+  const now = new Date();
+  const periodEnd = data.toDate ? toStdDate(data.toDate) : (yr && yr >= now.getFullYear() ? toStdDate(now) : toStdDate(`${yr}-12-31`));
+  const periodLabel = yr ? `01 Jan ${yr} – ${periodEnd}` : (months.length ? `${months[0]} to ${months[months.length-1]}` : fmtDate());
 
   const ws = wb.addWorksheet('📊 Summary', { properties:{ tabColor:{ argb:'FF'+C.darkBlue } } });
   ws.views=[{showGridLines:false}]; setColWidths(ws,[3,36,26,26,3]);
