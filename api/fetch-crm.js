@@ -294,18 +294,20 @@ async function fetchERPNext(url, username, password, reportType) {
   const emptyData   = { data: { data: [] } };
 
   // ── Helper: run a frappe query_report ─────────────────────────
+  // Frappe expects filters as a JSON string inside the POST body
   async function runReport(reportName, filters, label) {
     try {
       const res = await axios.post(`${base}/api/method/frappe.desk.query_report.run`, {
         report_name: reportName,
-        filters,
+        filters: JSON.stringify(filters),   // ← must be stringified
         are_default_filters: 0,
       }, { headers: { ...authHeaders, 'Content-Type': 'application/json' }, timeout: 60000 });
       const result = res.data.message;
       if (!result) { warnings.push(`${label}: empty response`); return []; }
-      // result.result is an array of row arrays; columns is an array of {fieldname} objects
+      // result.result is array of row arrays; columns is array of {fieldname} objects
       const cols = (result.columns || []).map(c => typeof c === 'object' ? (c.fieldname || c.label) : c);
-      return (result.result || []).map(row => {
+      const rows = (result.result || []).filter(row => Array.isArray(row)); // skip subtotals/group rows
+      return rows.map(row => {
         const obj = {};
         cols.forEach((col, i) => { obj[col] = row[i]; });
         return obj;

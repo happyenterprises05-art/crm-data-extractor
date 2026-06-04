@@ -891,14 +891,41 @@
 
   function buildCredFields(crm) {
     var cfg = credConfigs[crm]; if (!cfg) return;
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('crm_creds_' + crm) || '{}'); } catch(e) {}
     var html = '<div class="cred-info">' + cfg.info + '</div>';
     cfg.fields.forEach(function(f) {
+      var savedVal = saved[f.id] || '';
       html += '<label>' + f.label + '</label>';
-      html += '<input type="' + (f.type || 'text') + '" id="cred_' + f.id + '" placeholder="' + f.placeholder + '">';
+      html += '<input type="' + (f.type || 'text') + '" id="cred_' + f.id + '" placeholder="' + f.placeholder + '" value="' + (f.type === 'password' ? '' : savedVal.replace(/"/g,'&quot;')) + '">';
+      if (f.type === 'password' && savedVal) html += '<div style="font-size:11px;color:#4ade80;margin:-6px 0 8px 4px;">✅ Password saved — leave blank to use saved, or type to update.</div>';
       if (f.hint) html += '<div style="font-size:11px;color:#64748b;margin:4px 0 10px 4px;padding:6px 10px;background:rgba(251,191,36,0.07);border-left:2px solid #f59e0b;border-radius:0 4px 4px 0;">⚠️ ' + f.hint + '</div>';
     });
+    html += '<div style="margin-top:10px;display:flex;align-items:center;gap:8px;"><label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8;cursor:pointer;"><input type="checkbox" id="rememberCreds" ' + (Object.keys(saved).length ? 'checked' : '') + ' style="width:14px;height:14px;accent-color:#3b82f6;"> Remember credentials on this device</label></div>';
     document.getElementById('credFields').innerHTML = html;
     document.getElementById('credFields').style.display = 'block';
+    // Restore saved password placeholder hint
+    if (saved.password) { var pwEl = document.getElementById('cred_password'); if (pwEl) pwEl.setAttribute('placeholder', '(saved — leave blank to keep)'); }
+  }
+
+  function saveCredentials(crm) {
+    var cfg = credConfigs[crm]; if (!cfg) return;
+    var remember = document.getElementById('rememberCreds');
+    if (!remember || !remember.checked) { localStorage.removeItem('crm_creds_' + crm); return; }
+    var toSave = {};
+    var existing = {};
+    try { existing = JSON.parse(localStorage.getItem('crm_creds_' + crm) || '{}'); } catch(e) {}
+    cfg.fields.forEach(function(f) {
+      var el = document.getElementById('cred_' + f.id);
+      if (!el) return;
+      if (f.type === 'password') {
+        // Only update saved password if user typed something new
+        toSave[f.id] = el.value.trim() || existing[f.id] || '';
+      } else {
+        toSave[f.id] = el.value.trim();
+      }
+    });
+    localStorage.setItem('crm_creds_' + crm, JSON.stringify(toSave));
   }
 
   async function extractCRM() {
@@ -927,8 +954,18 @@
 
     try {
       var cfg = credConfigs[selectedCRM];
+      saveCredentials(selectedCRM);
+      var saved = {};
+      try { saved = JSON.parse(localStorage.getItem('crm_creds_' + selectedCRM) || '{}'); } catch(e) {}
       var body = { crm: selectedCRM, reportType: selectedReport, licenseKey: (document.getElementById('licenseKey').value || '').trim().toUpperCase() };
-      cfg.fields.forEach(function(f) { var el = document.getElementById('cred_' + f.id); if (el) body[f.id] = el.value.trim(); });
+      cfg.fields.forEach(function(f) {
+        var el = document.getElementById('cred_' + f.id);
+        if (!el) return;
+        // For password: use typed value if present, else fall back to saved
+        var val = el.value.trim();
+        if (f.type === 'password' && !val) val = saved[f.id] || '';
+        body[f.id] = val;
+      });
       var yrSel = document.getElementById('fiscalYearSelect');
       if (yrSel && yrSel.closest('#yearPickerBox').style.display !== 'none') { body.fiscalYear = parseInt(yrSel.value, 10); }
 
