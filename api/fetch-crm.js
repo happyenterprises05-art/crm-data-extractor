@@ -272,7 +272,7 @@ async function fetchFreshsales(apiKey, domain, reportType) {
   return { crmName:'Freshsales', reportType:rt, warnings, kpis:{totalPipeline,openDeals,closingSoon,wonThisMonth,totalLeads:leads.length}, pipeline, leads:leadList, contacts:contactList, activities:[], wonLost:[...wonDeals,...lostDeals] };
 }
 
-async function fetchERPNext(url, username, password, reportType) {
+async function fetchERPNext(url, username, password, reportType, fiscalYear) {
   const base     = url.replace(/\/$/, '');
   const warnings = [];
 
@@ -347,7 +347,7 @@ async function fetchERPNext(url, username, password, reportType) {
   // Uses Item-wise Sales Register report + salesperson lookup per invoice.
   if (rt === 'sales') {
     const now = new Date();
-    const yr       = body.fiscalYear ? parseInt(body.fiscalYear) : now.getFullYear();
+    const yr       = fiscalYear ? parseInt(fiscalYear) : now.getFullYear();
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
@@ -505,7 +505,7 @@ async function fetchERPNext(url, username, password, reportType) {
   // Runs 6 analytical checks on the sales data.
   if (rt === 'audit') {
     const now = new Date();
-    const yr       = body.fiscalYear ? parseInt(body.fiscalYear) : now.getFullYear();
+    const yr       = fiscalYear ? parseInt(fiscalYear) : now.getFullYear();
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
@@ -739,7 +739,7 @@ async function odooCall(base, cookie, model, method, args, kwargs = {}) {
   return res.data.result;
 }
 
-async function fetchOdoo(url, db, username, password, reportType) {
+async function fetchOdoo(url, db, username, password, reportType, fiscalYear) {
   const base = url.replace(/\/$/, '');
   const warnings = [];
   const rt = (reportType || 'full').toLowerCase();
@@ -836,7 +836,7 @@ async function fetchOdoo(url, db, username, password, reportType) {
   const needActivities= ['full','activities'].includes(rt);
 
   // Year filter — applied to pipeline (close date) and activities (due date)
-  const odooYr      = body.fiscalYear ? parseInt(body.fiscalYear) : null;
+  const odooYr      = fiscalYear ? parseInt(fiscalYear) : null;
   const yrFrom      = odooYr ? `${odooYr}-01-01` : null;
   const yrTo        = odooYr ? `${odooYr}-12-31` : null;
   const pipelineDomain = odooYr
@@ -2726,9 +2726,9 @@ module.exports = async (req, res) => {
       case 'zoho':        data = await fetchZoho(apiKey, reportType); break;
       case 'pipedrive':   data = await fetchPipedrive(apiKey, reportType); break;
       case 'freshsales':  data = await fetchFreshsales(apiKey, domain, reportType); break;
-      case 'erpnext':     data = await fetchERPNext(domain, username, password, reportType); break;
+      case 'erpnext':     data = await fetchERPNext(domain, username, password, reportType, fiscalYear); break;
       case 'salesforce':  data = await fetchSalesforce(instanceUrl, accessToken, reportType); break;
-      case 'odoo':        data = await fetchOdoo(domain, database, username, password, reportType); break;
+      case 'odoo':        data = await fetchOdoo(domain, database, username, password, reportType, fiscalYear); break;
       default:            return res.status(400).json({ error: `Unknown CRM: ${crm}` });
     }
 
