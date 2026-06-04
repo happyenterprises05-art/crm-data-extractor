@@ -325,7 +325,7 @@ async function fetchERPNext(url, username, password, reportType) {
     while (true) {
       try {
         const res = await axios.get(
-          `${base}/api/resource/Item?fields=["name","brand","item_group"]&limit=500&limit_start=${start}&filters=[["Item","disabled","=",0]]`,
+          `${base}/api/resource/Item?fields=["name","item_name","brand","item_group"]&limit=500&limit_start=${start}&filters=[["Item","disabled","=",0]]`,
           { headers: authHeaders, timeout: 30000 }
         );
         const batch = res.data.data || [];
@@ -338,7 +338,7 @@ async function fetchERPNext(url, username, password, reportType) {
       }
     }
     const map = {};
-    items.forEach(it => { map[it.name] = { brand: (it.brand || 'No Brand').trim(), category: (it.item_group || 'Uncategorised').trim() }; });
+    items.forEach(it => { map[it.name] = { brand: (it.brand || 'No Brand').trim(), category: (it.item_group || 'Uncategorised').trim(), item_name: (it.item_name || it.name || '').trim() }; });
     return map;
   }
 
@@ -351,17 +351,25 @@ async function fetchERPNext(url, username, password, reportType) {
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
-    // Fetch company name — required filter for Item-wise Sales Register in ERPNext
-    let company = '';
-    try {
-      const compRes = await axios.get(`${base}/api/resource/Company?fields=["name"]&limit=1`, { headers: authHeaders, timeout: 10000 });
-      company = ((compRes.data.data || [])[0] || {}).name || '';
-    } catch (_) {}
-    const salesFilters = { from_date: fromDate, to_date: toDate };
-    if (company) salesFilters.company = company;
-
-    // 1. Item-wise Sales Register — one call, all line items
-    const rawRows = await runReport('Item-wise Sales Register', salesFilters, 'Sales Register');
+    // 1. Fetch Sales Invoice Items directly via REST API — reliable, no report filters needed
+    const siFields = ['parent','posting_date','customer','customer_name','item_code','item_name','stock_qty','qty','rate','amount','territory'];
+    const rawRows = [];
+    let siStart = 0;
+    while (true) {
+      try {
+        const res = await axios.get(
+          `${base}/api/resource/Sales Invoice Item?fields=${JSON.stringify(siFields)}&limit=500&limit_start=${siStart}&filters=[["Sales Invoice Item","docstatus","=",1],["Sales Invoice","posting_date",">=","${fromDate}"],["Sales Invoice","posting_date","<=","${toDate}"]]`,
+          { headers: authHeaders, timeout: 30000 }
+        );
+        const batch = res.data.data || [];
+        rawRows.push(...batch);
+        if (batch.length < 500) break;
+        siStart += 500;
+      } catch (err) {
+        warnings.push(`Sales Invoice Items (page ${siStart}): ${err.message}`);
+        break;
+      }
+    }
 
     // 2. Fetch item brands concurrently with salesperson lookup
     const [brandMap, spMap] = await Promise.all([
@@ -426,46 +434,46 @@ async function fetchERPNext(url, username, password, reportType) {
   }
 
   // ── STOCK REPORT ─────────────────────────────────────────────
-  // Mirrors generate_stock_report.js from the office PC exactly.
-  // Uses Stock Balance report + Item master for brands.
+  // Uses direct REST API (/api/resource/Bin) — reliable, no report filters needed.
   if (rt === 'stock') {
-    const now = new Date();
-    const toDate   = now.toISOString().slice(0, 10);
-    const fromDate = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    // Fetch company name — required filter for Stock Balance report in ERPNext
-    let company = '';
-    try {
-      const compRes = await axios.get(
-        `${base}/api/resource/Company?fields=["name"]&limit=1`,
-        { headers: authHeaders, timeout: 10000 }
-      );
-      company = ((compRes.data.data || [])[0] || {}).name || '';
-    } catch (_) { /* company filter will be omitted if unavailable */ }
+    // Fetch all Bin records (warehouse stock per item) via direct REST API
+    const binFields = ['item_code','warehouse','actual_qty','stock_uom','valuation_rate','stock_value','reserved_qty','ordered_qty','indented_qty'];
+    const bins = [];
+    let binStart = 0;
+    while (true) {
+      try {
+        const res = await axios.get(
+          `${base}/api/resource/Bin?fields=${JSON.stringify(binFields)}&limit=500&limit_start=${binStart}&filters=[["Bin","actual_qty","!=",0]]`,
+          { headers: authHeaders, timeout: 30000 }
+        );
+        const batch = res.data.data || [];
+        bins.push(...batch);
+        if (batch.length < 500) break;
+        binStart += 500;
+      } catch (err) {
+        warnings.push(`Bin fetch (page ${binStart}): ${err.message}`);
+        break;
+      }
+    }
 
-    const stockFilters = { from_date: fromDate, to_date: toDate };
-    if (company) stockFilters.company = company;
+    const brandMap = await fetchItemBrands();
 
-    const [rawRows, brandMap] = await Promise.all([
-      runReport('Stock Balance', stockFilters, 'Stock Balance'),
-      fetchItemBrands(),
-    ]);
-
-    // Map to same shape as office PC stock_balance_raw rows
-    const allRows = rawRows.map(r => ({
+    // Map Bin records to same shape as office PC stock_balance_raw rows
+    const allRows = bins.map(r => ({
       Brand        : (brandMap[r.item_code] || {}).brand    || 'No Brand',
-      Category     : (brandMap[r.item_code] || {}).category || (r.item_group || 'Uncategorised'),
+      Category     : (brandMap[r.item_code] || {}).category || 'Uncategorised',
       Item_Code    : r.item_code   || '',
-      Item_Name    : r.item_name   || r.item_code || '',
+      Item_Name    : (brandMap[r.item_code] || {}).item_name || r.item_code || '',
       Warehouse    : r.warehouse   || '',
-      UOM          : r.stock_uom  || r.uom || '',
-      Opening_Qty  : parseFloat(r.opening_qty)    || 0,
-      In_Qty       : parseFloat(r.in_qty)         || 0,
-      Out_Qty      : parseFloat(r.out_qty)        || 0,
-      Balance_Qty  : parseFloat(r.bal_qty)        || 0,
-      Val_Rate     : parseFloat(r.val_rate)       || 0,
-      Balance_Value: parseFloat(r.bal_val)        || 0,
-      Reserved_Stock: parseFloat(r.reserved_stock)|| 0,
+      UOM          : r.stock_uom   || '',
+      Opening_Qty  : 0,
+      In_Qty       : 0,
+      Out_Qty      : 0,
+      Balance_Qty  : parseFloat(r.actual_qty)      || 0,
+      Val_Rate     : parseFloat(r.valuation_rate)  || 0,
+      Balance_Value: parseFloat(r.stock_value)     || 0,
+      Reserved_Stock: parseFloat(r.reserved_qty)   || 0,
     })).filter(r => r.Item_Code)
       .sort((a, b) => a.Brand.localeCompare(b.Brand) || a.Category.localeCompare(b.Category) || a.Item_Code.localeCompare(b.Item_Code));
 
@@ -501,17 +509,27 @@ async function fetchERPNext(url, username, password, reportType) {
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
-    // Fetch company name — required filter for Item-wise Sales Register in ERPNext
-    let company = '';
-    try {
-      const compRes = await axios.get(`${base}/api/resource/Company?fields=["name"]&limit=1`, { headers: authHeaders, timeout: 10000 });
-      company = ((compRes.data.data || [])[0] || {}).name || '';
-    } catch (_) {}
-    const auditFilters = { from_date: fromDate, to_date: toDate };
-    if (company) auditFilters.company = company;
-
+    // Fetch Sales Invoice Items directly via REST API
+    const auditFields = ['parent','posting_date','customer','customer_name','item_code','item_name','stock_qty','qty','rate','amount'];
+    const auditRaw = [];
+    let auStart = 0;
+    while (true) {
+      try {
+        const res = await axios.get(
+          `${base}/api/resource/Sales Invoice Item?fields=${JSON.stringify(auditFields)}&limit=500&limit_start=${auStart}&filters=[["Sales Invoice Item","docstatus","=",1],["Sales Invoice","posting_date",">=","${fromDate}"],["Sales Invoice","posting_date","<=","${toDate}"]]`,
+          { headers: authHeaders, timeout: 30000 }
+        );
+        const batch = res.data.data || [];
+        auditRaw.push(...batch);
+        if (batch.length < 500) break;
+        auStart += 500;
+      } catch (err) {
+        warnings.push(`Audit data (page ${auStart}): ${err.message}`);
+        break;
+      }
+    }
     const [rawRows, brandMap] = await Promise.all([
-      runReport('Item-wise Sales Register', auditFilters, 'Sales Register'),
+      Promise.resolve(auditRaw),
       fetchItemBrands(),
     ]);
 
