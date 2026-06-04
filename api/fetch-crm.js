@@ -2693,7 +2693,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed. Use POST.' });
 
   try {
-    const { crm, apiKey, domain, username, password, instanceUrl, accessToken, database, reportType, licenseKey } = req.body || {};
+    const { crm, apiKey, domain, username, password, instanceUrl, accessToken, database, reportType, licenseKey, fiscalYear } = req.body || {};
 
     if (!crm)        return res.status(400).json({ error: 'CRM type required.' });
     if (!reportType) return res.status(400).json({ error: 'Report type required.' });
