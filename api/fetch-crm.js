@@ -2653,7 +2653,10 @@ module.exports = async (req, res) => {
     }
 
     // Validate license key
-    if (!licenseKey) return res.status(401).json({ error: 'License key required.' });
+    if (!licenseKey) {
+      reportError({ product: 'CRM Data Extractor', version: 'v2.0', message: 'License key missing (401)', crm: crm || '', extra: 'stage:license-check' }).catch(() => {});
+      return res.status(401).json({ error: 'License key required.' });
+    }
 
     // Validate required credentials per CRM before calling fetch functions
     const c = crm.toLowerCase();

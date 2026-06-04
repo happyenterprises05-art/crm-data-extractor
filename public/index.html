@@ -927,7 +927,7 @@
 
     try {
       var cfg = credConfigs[selectedCRM];
-      var body = { crm: selectedCRM, reportType: selectedReport };
+      var body = { crm: selectedCRM, reportType: selectedReport, licenseKey: (document.getElementById('licenseKey').value || '').trim().toUpperCase() };
       cfg.fields.forEach(function(f) { var el = document.getElementById('cred_' + f.id); if (el) body[f.id] = el.value.trim(); });
       var yrSel = document.getElementById('fiscalYearSelect');
       if (yrSel && yrSel.closest('#yearPickerBox').style.display !== 'none') { body.fiscalYear = parseInt(yrSel.value, 10); }
