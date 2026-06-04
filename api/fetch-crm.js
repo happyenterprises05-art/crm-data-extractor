@@ -351,25 +351,52 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
-    // 1. Fetch Sales Invoice Items directly via REST API — reliable, no report filters needed
-    const siFields = ['parent','posting_date','customer','customer_name','item_code','item_name','stock_qty','qty','rate','amount','territory'];
-    const rawRows = [];
-    let siStart = 0;
+    // 1. Fetch submitted Sales Invoices in date range
+    const invoices = [];
+    let invStart = 0;
     while (true) {
       try {
         const res = await axios.get(
-          `${base}/api/resource/Sales Invoice Item?fields=${JSON.stringify(siFields)}&limit=500&limit_start=${siStart}&filters=[["Sales Invoice Item","docstatus","=",1],["Sales Invoice","posting_date",">=","${fromDate}"],["Sales Invoice","posting_date","<=","${toDate}"]]`,
+          `${base}/api/resource/Sales Invoice?fields=["name","posting_date","customer","customer_name","territory"]&filters=[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date",">=","${fromDate}"],["Sales Invoice","posting_date","<=","${toDate}"]]&limit=500&limit_start=${invStart}`,
           { headers: authHeaders, timeout: 30000 }
         );
         const batch = res.data.data || [];
-        rawRows.push(...batch);
+        invoices.push(...batch);
         if (batch.length < 500) break;
-        siStart += 500;
+        invStart += 500;
       } catch (err) {
-        warnings.push(`Sales Invoice Items (page ${siStart}): ${err.message}`);
+        warnings.push(`Sales Invoices fetch: ${err.message}`);
         break;
       }
     }
+
+    // 2. Fetch items for those invoices in batches of 50 invoice names at a time
+    const rawRows = [];
+    const INV_CHUNK = 50;
+    for (let i = 0; i < invoices.length; i += INV_CHUNK) {
+      const chunk = invoices.slice(i, i + INV_CHUNK).map(inv => inv.name);
+      const chunkFilter = JSON.stringify([["Sales Invoice Item","parent","in", chunk]]);
+      try {
+        const res = await axios.get(
+          `${base}/api/resource/Sales Invoice Item?fields=["parent","item_code","item_name","stock_qty","qty","rate","amount"]&filters=${encodeURIComponent(chunkFilter)}&limit=500`,
+          { headers: authHeaders, timeout: 30000 }
+        );
+        rawRows.push(...(res.data.data || []));
+      } catch (err) {
+        warnings.push(`Sales Invoice Items (chunk ${i}): ${err.message}`);
+      }
+    }
+
+    // Attach invoice-level fields (posting_date, customer, territory) to each item row
+    const invMap = {};
+    invoices.forEach(inv => { invMap[inv.name] = inv; });
+    rawRows.forEach(r => {
+      const inv = invMap[r.parent] || {};
+      r.posting_date   = inv.posting_date   || '';
+      r.customer       = inv.customer       || '';
+      r.customer_name  = inv.customer_name  || '';
+      r.territory      = inv.territory      || '';
+    });
 
     // 2. Fetch item brands concurrently with salesperson lookup
     const [brandMap, spMap] = await Promise.all([
@@ -509,24 +536,37 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
-    // Fetch Sales Invoice Items directly via REST API
-    const auditFields = ['parent','posting_date','customer','customer_name','item_code','item_name','stock_qty','qty','rate','amount'];
-    const auditRaw = [];
-    let auStart = 0;
+    // Fetch submitted Sales Invoices in date range, then items in chunks
+    const auditInvoices = [];
+    let auInvStart = 0;
     while (true) {
       try {
         const res = await axios.get(
-          `${base}/api/resource/Sales Invoice Item?fields=${JSON.stringify(auditFields)}&limit=500&limit_start=${auStart}&filters=[["Sales Invoice Item","docstatus","=",1],["Sales Invoice","posting_date",">=","${fromDate}"],["Sales Invoice","posting_date","<=","${toDate}"]]`,
+          `${base}/api/resource/Sales Invoice?fields=["name","posting_date","customer","customer_name"]&filters=[["Sales Invoice","docstatus","=",1],["Sales Invoice","posting_date",">=","${fromDate}"],["Sales Invoice","posting_date","<=","${toDate}"]]&limit=500&limit_start=${auInvStart}`,
           { headers: authHeaders, timeout: 30000 }
         );
         const batch = res.data.data || [];
-        auditRaw.push(...batch);
+        auditInvoices.push(...batch);
         if (batch.length < 500) break;
-        auStart += 500;
-      } catch (err) {
-        warnings.push(`Audit data (page ${auStart}): ${err.message}`);
-        break;
-      }
+        auInvStart += 500;
+      } catch (err) { warnings.push(`Audit invoices: ${err.message}`); break; }
+    }
+    const auditRaw = [];
+    for (let i = 0; i < auditInvoices.length; i += 50) {
+      const chunk = auditInvoices.slice(i, i + 50).map(inv => inv.name);
+      const cf = JSON.stringify([["Sales Invoice Item","parent","in", chunk]]);
+      try {
+        const res = await axios.get(
+          `${base}/api/resource/Sales Invoice Item?fields=["parent","item_code","item_name","stock_qty","qty","rate","amount"]&filters=${encodeURIComponent(cf)}&limit=500`,
+          { headers: authHeaders, timeout: 30000 }
+        );
+        res.data.data.forEach(r => {
+          const inv = auditInvoices.find(a => a.name === r.parent) || {};
+          r.posting_date  = inv.posting_date  || '';
+          r.customer_name = inv.customer_name || '';
+          auditRaw.push(r);
+        });
+      } catch (err) { warnings.push(`Audit items chunk ${i}: ${err.message}`); }
     }
     const [rawRows, brandMap] = await Promise.all([
       Promise.resolve(auditRaw),
