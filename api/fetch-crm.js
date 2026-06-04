@@ -1245,7 +1245,7 @@ function erpBuildSalesperson(wb, rows) {
   hRow.height=20; freezeRow(ws,4);
   sorted.forEach((sp,i)=>{
     const row=ws.getRow(5+i);
-    const bg=i===0?'FFFFD700':i===1?'FFC0C0C0':i===2?'FFCD7F32':i%2===0?C.white:C.altRow;
+    const bg=i===0?'FFD700':i===1?'C0C0C0':i===2?'CD7F32':i%2===0?C.white:C.altRow;
     const pct=totalRev>0?(sp.amount/totalRev*100):0;
     row.getCell(1).value=sp.sp;            row.getCell(1).style=cellStyle(bg,true);
     row.getCell(2).value=sp.invoices.size; row.getCell(2).style=cellStyle(bg,false,'center');
