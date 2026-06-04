@@ -9,7 +9,7 @@
 const https = require('https');
 const { reportError } = require('./report-error');
 
-const LICENSE_SERVER = 'https://script.google.com/macros/s/AKfycbzl-W9lWLp3GTTXfyONpqS1Y9gZ6L7LG3DZfNRYI62O-pfm5nBj5fUBSJBhoSib_7Rh/exec';
+const LICENSE_SERVER = 'https://script.google.com/macros/s/AKfycbyRGFMHPNCJW-tcYNr99jBiVCyPOai8Qli5vtwcAIE9HVYJ3gTgb7l-Zwi08ZMIXdDXSA/exec';
 
 function isValidKeyFormat(key) {
   if (!key || typeof key !== 'string') return false;
