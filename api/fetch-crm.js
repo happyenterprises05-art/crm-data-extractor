@@ -370,6 +370,9 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
       }
     }
 
+    // DEBUG: log invoice count so we can see if step 1 worked
+    warnings.push(`DEBUG: Found ${invoices.length} invoices in ${fromDate} to ${toDate}`);
+
     // 2. Fetch items for those invoices in batches of 50 invoice names at a time
     const rawRows = [];
     const INV_CHUNK = 50;
@@ -381,7 +384,9 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
           `${base}/api/resource/Sales Invoice Item?fields=["parent","item_code","item_name","stock_qty","qty","rate","amount"]&filters=${encodeURIComponent(chunkFilter)}&limit=500`,
           { headers: authHeaders, timeout: 30000 }
         );
-        rawRows.push(...(res.data.data || []));
+        const items = res.data.data || [];
+        warnings.push(`DEBUG: chunk ${i} → ${chunk.length} invoices → ${items.length} items`);
+        rawRows.push(...items);
       } catch (err) {
         warnings.push(`Sales Invoice Items (chunk ${i}): ${err.message}`);
       }
