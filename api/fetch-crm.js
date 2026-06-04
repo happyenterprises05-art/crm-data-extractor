@@ -370,78 +370,61 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
       }
     }
 
-    // DEBUG: log invoice count so we can see if step 1 worked
-    warnings.push(`DEBUG: Found ${invoices.length} invoices in ${fromDate} to ${toDate}`);
-
-    // 2. Fetch items for those invoices in batches of 50 invoice names at a time
+    // 2. Fetch each invoice individually — gets items + sales_team in one call,
+    //    avoids needing "Sales Invoice Item" doctype read permissions
     const rawRows = [];
-    const INV_CHUNK = 50;
-    for (let i = 0; i < invoices.length; i += INV_CHUNK) {
-      const chunk = invoices.slice(i, i + INV_CHUNK).map(inv => inv.name);
-      const chunkFilter = JSON.stringify([["Sales Invoice Item","parent","in", chunk]]);
-      try {
-        const res = await axios.get(
-          `${base}/api/resource/Sales Invoice Item?fields=["parent","item_code","item_name","stock_qty","qty","rate","amount"]&filters=${encodeURIComponent(chunkFilter)}&limit=500`,
-          { headers: authHeaders, timeout: 30000 }
-        );
-        const items = res.data.data || [];
-        warnings.push(`DEBUG: chunk ${i} → ${chunk.length} invoices → ${items.length} items`);
-        rawRows.push(...items);
-      } catch (err) {
-        warnings.push(`Sales Invoice Items (chunk ${i}): ${err.message}`);
-      }
+    const CONCURRENT = 15;
+    for (let i = 0; i < invoices.length; i += CONCURRENT) {
+      const batch = invoices.slice(i, i + CONCURRENT);
+      const results = await Promise.all(batch.map(async (inv) => {
+        try {
+          const res = await axios.get(
+            `${base}/api/resource/Sales%20Invoice/${encodeURIComponent(inv.name)}`,
+            { headers: authHeaders, timeout: 20000 }
+          );
+          const doc = res.data.data || {};
+          const items = doc.items || [];
+          const st = (doc.sales_team || [])[0];
+          const salesPerson = st ? (st.sales_person || '') : '';
+          return items.map(item => ({
+            parent       : inv.name,
+            item_code    : item.item_code    || '',
+            item_name    : item.item_name    || '',
+            stock_qty    : item.stock_qty    || item.qty || 0,
+            qty          : item.qty          || 0,
+            rate         : item.rate         || 0,
+            amount       : item.amount       || 0,
+            posting_date : inv.posting_date  || '',
+            customer     : inv.customer      || '',
+            customer_name: inv.customer_name || '',
+            territory    : doc.territory     || inv.territory || '',
+            sales_person : salesPerson,
+          }));
+        } catch (err) {
+          warnings.push(`Invoice ${inv.name}: ${err.message}`);
+          return [];
+        }
+      }));
+      results.forEach(items => rawRows.push(...items));
     }
 
-    // Attach invoice-level fields (posting_date, customer, territory) to each item row
-    const invMap = {};
-    invoices.forEach(inv => { invMap[inv.name] = inv; });
-    rawRows.forEach(r => {
-      const inv = invMap[r.parent] || {};
-      r.posting_date   = inv.posting_date   || '';
-      r.customer       = inv.customer       || '';
-      r.customer_name  = inv.customer_name  || '';
-      r.territory      = inv.territory      || '';
-    });
-
-    // 2. Fetch item brands concurrently with salesperson lookup
-    const [brandMap, spMap] = await Promise.all([
+    // 3. Fetch item brands (brand/category lookup)
+    const [brandMap] = await Promise.all([
       fetchItemBrands(),
-      (async () => {
-        // Get salesperson from Sales Invoice sales_team field — batch 30 at a time
-        const invNames = [...new Set(rawRows.map(r => r.invoice || r.parent).filter(Boolean))];
-        const map = {};
-        const CHUNK = 30;
-        for (let i = 0; i < invNames.length; i += CHUNK) {
-          const chunk = invNames.slice(i, i + CHUNK);
-          await Promise.all(chunk.map(async name => {
-            try {
-              const res = await axios.get(
-                `${base}/api/resource/Sales%20Invoice/${encodeURIComponent(name)}?fields=["name","sales_team","territory"]`,
-                { headers: authHeaders, timeout: 15000 }
-              );
-              const d = res.data.data || {};
-              const st = (d.sales_team || [])[0];
-              map[name] = { sales_person: st ? (st.sales_person || '') : '', territory: d.territory || '' };
-            } catch (_) { map[name] = { sales_person: '', territory: '' }; }
-          }));
-        }
-        return map;
-      })(),
     ]);
 
-    // 3. Merge into rows — same shape as office PC sales_items.json
+    // 4. Merge into rows — same shape as office PC sales_items.json
     const toMonthKey = s => (s && s.length >= 7) ? s.substring(0, 7) : 'Unknown';
     const rows = rawRows.map(r => {
-      const invName = r.invoice || r.parent || '';
-      const sp = spMap[invName] || {};
+      const invName = r.parent || '';
       const info = brandMap[r.item_code] || { brand: 'No Brand', category: 'Uncategorised' };
       return {
         date       : toStdDate(r.posting_date || ''),
         month_key  : toMonthKey(r.posting_date || ''),
         invoice_no : invName,
         customer   : (r.customer_name || r.customer || 'Unknown').trim(),
-        territory  : (sp.territory || r.territory || 'Unknown').trim(),
-        salesperson: (sp.sales_person || r.sales_person || 'Unassigned').trim(),
+        territory  : (r.territory || 'Unknown').trim(),
+        salesperson: (r.sales_person || 'Unassigned').trim(),
         item_code  : r.item_code || '',
         item_name  : r.item_name || r.item_code || '',
         brand      : info.brand,
@@ -556,35 +539,55 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
         auInvStart += 500;
       } catch (err) { warnings.push(`Audit invoices: ${err.message}`); break; }
     }
+    // Fetch each audit invoice individually — gets items + sales_team without needing
+    // Sales Invoice Item doctype permissions
     const auditRaw = [];
-    for (let i = 0; i < auditInvoices.length; i += 50) {
-      const chunk = auditInvoices.slice(i, i + 50).map(inv => inv.name);
-      const cf = JSON.stringify([["Sales Invoice Item","parent","in", chunk]]);
-      try {
-        const res = await axios.get(
-          `${base}/api/resource/Sales Invoice Item?fields=["parent","item_code","item_name","stock_qty","qty","rate","amount"]&filters=${encodeURIComponent(cf)}&limit=500`,
-          { headers: authHeaders, timeout: 30000 }
-        );
-        res.data.data.forEach(r => {
-          const inv = auditInvoices.find(a => a.name === r.parent) || {};
-          r.posting_date  = inv.posting_date  || '';
-          r.customer_name = inv.customer_name || '';
-          auditRaw.push(r);
-        });
-      } catch (err) { warnings.push(`Audit items chunk ${i}: ${err.message}`); }
+    const AUDIT_CONCURRENT = 15;
+    for (let i = 0; i < auditInvoices.length; i += AUDIT_CONCURRENT) {
+      const batch = auditInvoices.slice(i, i + AUDIT_CONCURRENT);
+      const results = await Promise.all(batch.map(async (inv) => {
+        try {
+          const res = await axios.get(
+            `${base}/api/resource/Sales%20Invoice/${encodeURIComponent(inv.name)}`,
+            { headers: authHeaders, timeout: 20000 }
+          );
+          const doc = res.data.data || {};
+          const docItems = doc.items || [];
+          const st = (doc.sales_team || [])[0];
+          const salesPerson = st ? (st.sales_person || '') : '';
+          return docItems.map(item => ({
+            parent       : inv.name,
+            item_code    : item.item_code    || '',
+            item_name    : item.item_name    || '',
+            stock_qty    : item.stock_qty    || item.qty || 0,
+            qty          : item.qty          || 0,
+            rate         : item.rate         || 0,
+            amount       : item.amount       || 0,
+            posting_date : inv.posting_date  || '',
+            customer_name: inv.customer_name || '',
+            sales_person : salesPerson,
+          }));
+        } catch (err) {
+          warnings.push(`Audit invoice ${inv.name}: ${err.message}`);
+          return [];
+        }
+      }));
+      results.forEach(items => auditRaw.push(...items));
     }
-    const [rawRows, brandMap] = await Promise.all([
+
+    const [auditRawRows, brandMap] = await Promise.all([
       Promise.resolve(auditRaw),
       fetchItemBrands(),
     ]);
+    const rawRows = auditRawRows;
 
     // Build items array in same format as audit_sales_data.js expects
     const items = rawRows.map(r => {
       const info = brandMap[r.item_code] || { brand: 'No Brand', category: 'Uncategorised' };
       return {
-        parent        : r.invoice || r.parent || '',
+        parent        : r.parent || '',
         posting_date  : toStdDate(r.posting_date || ''),
-        customer_name : (r.customer_name || r.customer || '').trim(),
+        customer_name : (r.customer_name || '').trim(),
         salesperson   : (r.sales_person || '').trim(),
         item_code     : r.item_code || '',
         item_name     : r.item_name || '',
