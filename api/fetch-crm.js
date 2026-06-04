@@ -349,8 +349,17 @@ async function fetchERPNext(url, username, password, reportType) {
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
+    // Fetch company name — required filter for Item-wise Sales Register in ERPNext
+    let company = '';
+    try {
+      const compRes = await axios.get(`${base}/api/resource/Company?fields=["name"]&limit=1`, { headers: authHeaders, timeout: 10000 });
+      company = ((compRes.data.data || [])[0] || {}).name || '';
+    } catch (_) {}
+    const salesFilters = { from_date: fromDate, to_date: toDate };
+    if (company) salesFilters.company = company;
+
     // 1. Item-wise Sales Register — one call, all line items
-    const rawRows = await runReport('Item-wise Sales Register', { from_date: fromDate, to_date: toDate }, 'Sales Register');
+    const rawRows = await runReport('Item-wise Sales Register', salesFilters, 'Sales Register');
 
     // 2. Fetch item brands concurrently with salesperson lookup
     const [brandMap, spMap] = await Promise.all([
@@ -422,8 +431,21 @@ async function fetchERPNext(url, username, password, reportType) {
     const toDate   = now.toISOString().slice(0, 10);
     const fromDate = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+    // Fetch company name — required filter for Stock Balance report in ERPNext
+    let company = '';
+    try {
+      const compRes = await axios.get(
+        `${base}/api/resource/Company?fields=["name"]&limit=1`,
+        { headers: authHeaders, timeout: 10000 }
+      );
+      company = ((compRes.data.data || [])[0] || {}).name || '';
+    } catch (_) { /* company filter will be omitted if unavailable */ }
+
+    const stockFilters = { from_date: fromDate, to_date: toDate };
+    if (company) stockFilters.company = company;
+
     const [rawRows, brandMap] = await Promise.all([
-      runReport('Stock Balance', { from_date: fromDate, to_date: toDate }, 'Stock Balance'),
+      runReport('Stock Balance', stockFilters, 'Stock Balance'),
       fetchItemBrands(),
     ]);
 
@@ -477,8 +499,17 @@ async function fetchERPNext(url, username, password, reportType) {
     const fromDate = `${yr}-01-01`;
     const toDate   = yr < now.getFullYear() ? `${yr}-12-31` : now.toISOString().slice(0, 10);
 
+    // Fetch company name — required filter for Item-wise Sales Register in ERPNext
+    let company = '';
+    try {
+      const compRes = await axios.get(`${base}/api/resource/Company?fields=["name"]&limit=1`, { headers: authHeaders, timeout: 10000 });
+      company = ((compRes.data.data || [])[0] || {}).name || '';
+    } catch (_) {}
+    const auditFilters = { from_date: fromDate, to_date: toDate };
+    if (company) auditFilters.company = company;
+
     const [rawRows, brandMap] = await Promise.all([
-      runReport('Item-wise Sales Register', { from_date: fromDate, to_date: toDate }, 'Sales Register'),
+      runReport('Item-wise Sales Register', auditFilters, 'Sales Register'),
       fetchItemBrands(),
     ]);
 
