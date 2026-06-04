@@ -1085,13 +1085,12 @@
       document.getElementById('trialBtn').disabled = false;
     }
   }
-  // Close modal on backdrop click
-  document.getElementById('trialModal').addEventListener('click', function(e) {
-    if (e.target === this) closeTrialModal();
-  });
-  // Enter key submits
-  document.getElementById('trialEmail').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') submitTrial();
+  // Close modal on backdrop click + Enter key — wrapped in DOMContentLoaded so elements exist
+  document.addEventListener('DOMContentLoaded', function() {
+    var tm = document.getElementById('trialModal');
+    var te = document.getElementById('trialEmail');
+    if (tm) tm.addEventListener('click', function(e) { if (e.target === this) closeTrialModal(); });
+    if (te) te.addEventListener('keydown', function(e) { if (e.key === 'Enter') submitTrial(); });
   });
 </script>
 
