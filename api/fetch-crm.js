@@ -701,46 +701,72 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
   }
 
   // ── FULL CRM REPORT (default) ─────────────────────────────────
+  // Fetches CRM module (Lead/Opportunity) + Customer/Supplier master data.
+  // CRM module may not be enabled — Customer/Supplier always available.
   const fullWarnings = [];
   const emptyList = { data: { data: [] } };
-  const [leadsRes, oppsRes, contactsRes, tasksRes] = await Promise.all([
-    safeGet('Leads',    axios.get(`${base}/api/resource/Lead?fields=["name","lead_name","email_id","mobile_no","company_name","status","modified"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
-    safeGet('Opportunities', axios.get(`${base}/api/resource/Opportunity?fields=["name","opportunity_from","opportunity_type","status","expected_closing","opportunity_amount","probability"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
-    safeGet('Contacts', axios.get(`${base}/api/resource/Contact?fields=["name","first_name","last_name","email_id","mobile_no","company_name","designation","modified"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
-    safeGet('Tasks',    axios.get(`${base}/api/resource/Task?fields=["name","subject","status","exp_end_date","task_weight"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
+
+  const [leadsRes, oppsRes, contactsRes, tasksRes, customersRes, suppliersRes] = await Promise.all([
+    safeGet('Leads',         axios.get(`${base}/api/resource/Lead?fields=["name","lead_name","email_id","mobile_no","company_name","status","modified"]&limit=200`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Opportunities', axios.get(`${base}/api/resource/Opportunity?fields=["name","opportunity_from","opportunity_type","status","expected_closing","opportunity_amount","probability"]&limit=200`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Contacts',      axios.get(`${base}/api/resource/Contact?fields=["name","first_name","last_name","email_id","mobile_no","company_name","designation","modified"]&limit=200`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Tasks',         axios.get(`${base}/api/resource/Task?fields=["name","subject","status","exp_end_date","task_weight"]&limit=200`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Customers',     axios.get(`${base}/api/resource/Customer?fields=["name","customer_name","customer_type","customer_group","territory","mobile_no","email_id","modified"]&limit=500`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Suppliers',     axios.get(`${base}/api/resource/Supplier?fields=["name","supplier_name","supplier_type","supplier_group","country","mobile_no","email_id","modified"]&limit=500`, { headers: authHeaders }), emptyList, fullWarnings),
   ]);
 
-  const leads    = leadsRes.data.data    || [];
-  const opps     = oppsRes.data.data     || [];
-  const contacts = contactsRes.data.data || [];
-  const tasks    = tasksRes.data.data    || [];
+  const leads     = leadsRes.data.data     || [];
+  const opps      = oppsRes.data.data      || [];
+  const contacts  = contactsRes.data.data  || [];
+  const tasks     = tasksRes.data.data     || [];
+  const customers = customersRes.data.data || [];
+  const suppliers = suppliersRes.data.data || [];
 
   const pipeline = opps.map(o => ({
     name: o.opportunity_from||'', amount: parseFloat(o.opportunity_amount)||0,
-    stage: o.status||'', closeDate: o.expected_closing||'',
+    stage: o.status||'', closeDate: toStdDate(o.expected_closing||''),
     probability: parseFloat(o.probability)||0, pipeline: o.opportunity_type||'',
   }));
   const leadList = leads.map(l => ({
     name: l.lead_name||'', email: l.email_id||'', phone: l.mobile_no||'',
-    company: l.company_name||'', status: l.status||'', lastActivity: l.modified||'',
+    company: l.company_name||'', status: l.status||'', lastActivity: toStdDate(l.modified||''),
   }));
   const contactList = contacts.map(c => ({
     name: `${c.first_name||''} ${c.last_name||''}`.trim(),
     email: c.email_id||'', phone: c.mobile_no||'',
     company: c.company_name||'', title: c.designation||'',
-    lastActivity: c.modified||'', status: 'Active',
+    lastActivity: toStdDate(c.modified||''), status: 'Active',
   }));
   const actList = tasks.map(t => ({
-    subject: t.subject||'', status: t.status||'', dueDate: t.exp_end_date||'', type: 'Task',
+    subject: t.subject||'', status: t.status||'', dueDate: toStdDate(t.exp_end_date||''), type: 'Task',
   }));
-  const wonDeals  = opps.filter(o=>o.status==='Won').map(o=>({name:o.opportunity_from,amount:parseFloat(o.opportunity_amount)||0,result:'Won',closeDate:o.expected_closing}));
-  const lostDeals = opps.filter(o=>o.status==='Lost').map(o=>({name:o.opportunity_from,amount:parseFloat(o.opportunity_amount)||0,result:'Lost',closeDate:o.expected_closing}));
+  const customerList = customers.map(c => ({
+    name: c.customer_name || c.name || '',
+    type: c.customer_type || '',
+    group: c.customer_group || '',
+    territory: c.territory || '',
+    phone: c.mobile_no || '',
+    email: c.email_id || '',
+    lastModified: toStdDate(c.modified || ''),
+  }));
+  const supplierList = suppliers.map(s => ({
+    name: s.supplier_name || s.name || '',
+    type: s.supplier_type || '',
+    group: s.supplier_group || '',
+    country: s.country || '',
+    phone: s.mobile_no || '',
+    email: s.email_id || '',
+    lastModified: toStdDate(s.modified || ''),
+  }));
+
+  const wonDeals  = opps.filter(o=>o.status==='Won').map(o=>({name:o.opportunity_from,amount:parseFloat(o.opportunity_amount)||0,result:'Won',closeDate:toStdDate(o.expected_closing)}));
+  const lostDeals = opps.filter(o=>o.status==='Lost').map(o=>({name:o.opportunity_from,amount:parseFloat(o.opportunity_amount)||0,result:'Lost',closeDate:toStdDate(o.expected_closing)}));
   const totalPipeline = pipeline.reduce((s,d)=>s+d.amount,0);
   const openDeals     = pipeline.filter(d=>!['Won','Lost'].includes(d.stage)).length;
   const closingSoon   = pipeline.filter(d=>{ if(!d.closeDate)return false; const days=(new Date(d.closeDate)-new Date())/86400000; return days>=0&&days<=30;}).length;
   const wonThisMonth  = wonDeals.filter(d=>{ if(!d.closeDate)return false; const cd=new Date(d.closeDate); const now=new Date(); return cd.getMonth()===now.getMonth()&&cd.getFullYear()===now.getFullYear();}).length;
 
-  return { crmName:'ERPNext', reportType:'full', warnings:[...warnings,...fullWarnings], kpis:{totalPipeline,openDeals,closingSoon,wonThisMonth}, pipeline, leads:leadList, contacts:contactList, activities:actList, wonLost:[...wonDeals,...lostDeals] };
+  return { crmName:'ERPNext', reportType:'full', warnings:[...warnings,...fullWarnings], kpis:{totalPipeline,openDeals,closingSoon,wonThisMonth,totalCustomers:customers.length,totalSuppliers:suppliers.length}, pipeline, leads:leadList, contacts:contactList, activities:actList, wonLost:[...wonDeals,...lostDeals], customers:customerList, suppliers:supplierList };
 }
 
 async function fetchSalesforce(instanceUrl, accessToken, reportType) {
@@ -1049,6 +1075,14 @@ async function buildExcel(data) {
     if ((data.findings.unassignedSP||[]).length)    erpBuildUnassignedSP(wb, data.findings);
     if ((data.findings.weekendInvoices||[]).length) erpBuildWeekendInvoices(wb, data.findings);
     erpBuildConcentration(wb, data.findings);
+  } else if (data.crmName === 'ERPNext' && data.reportType === 'full') {
+    // ERPNext full report — Customer + Supplier master + any CRM data available
+    erpBuildFullSummary(wb, data);
+    erpBuildCustomerList(wb, data.customers || []);
+    erpBuildSupplierList(wb, data.suppliers || []);
+    if ((data.leads||[]).length)    buildLeads(wb, data.leads);
+    if ((data.contacts||[]).length) buildContacts(wb, data.contacts);
+    if ((data.pipeline||[]).length) buildPipeline(wb, data.pipeline);
   } else {
     const rt = (data.reportType || 'pipeline').toLowerCase();
     if (rt === 'pipeline') {
@@ -1744,6 +1778,90 @@ function erpBuildConcentration(wb, findings) {
     row.height=18;
   });
   if(!items.length){ws.getRow(5).getCell(1).value='No customer data.';}
+}
+
+// ── ERPNEXT FULL REPORT BUILDERS ─────────────────────────────
+
+function erpBuildFullSummary(wb, data) {
+  const customers = data.customers || [];
+  const suppliers = data.suppliers || [];
+  const leads     = data.leads     || [];
+  const pipeline  = data.pipeline  || [];
+  const ws = wb.addWorksheet('📊 Summary', { properties: { tabColor: { argb: 'FF' + C.darkBlue } } });
+  ws.views = [{ showGridLines: false }]; setColWidths(ws, [3, 36, 26, 26, 3]);
+  ws.mergeCells('B2:D2');
+  const t = ws.getCell('B2'); t.value = 'ERPNEXT — FULL OVERVIEW';
+  t.style = { font: { bold: true, size: 22, name: 'Calibri', color: { argb: 'FF' + C.headerFont } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + C.darkBlue } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+  ws.getRow(2).height = 48;
+  ws.mergeCells('B3:D3');
+  const s = ws.getCell('B3'); s.value = `Generated: ${fmtDate()}  |  Developed by Arun Chiramal`;
+  s.style = { font: { bold: false, size: 10, name: 'Calibri', color: { argb: 'FF' + C.headerFont } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + C.midBlue } }, alignment: { horizontal: 'center', vertical: 'middle' } };
+  ws.getRow(3).height = 22; ws.getRow(4).height = 12;
+  const kpis = [
+    ['🏢 Total Customers',  customers.length.toString(),  C.darkBlue],
+    ['🚚 Total Suppliers',  suppliers.length.toString(),  C.midBlue],
+    ['🎯 Leads Found',      leads.length.toString(),      C.teal],
+    ['📊 Opportunities',    pipeline.length.toString(),   C.purple],
+  ];
+  kpis.forEach(([label, value, bg], i) => {
+    const row = 5 + i; ws.mergeCells(`B${row}:C${row}`);
+    const lC = ws.getCell(`B${row}`); lC.value = label;
+    lC.style = { font: { bold: true, size: 11, name: 'Calibri', color: { argb: 'FF333333' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9F0FB' } }, alignment: { horizontal: 'left', vertical: 'middle', indent: 1 }, border: thinBorder() };
+    const vC = ws.getCell(`D${row}`); vC.value = value;
+    vC.style = { font: { bold: true, size: 14, name: 'Calibri', color: { argb: 'FF' + C.headerFont } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + bg } }, alignment: { horizontal: 'center', vertical: 'middle' }, border: thinBorder() };
+    ws.getRow(row).height = 30;
+  });
+  ws.getRow(10).height = 12;
+  ws.mergeCells('B11:D11');
+  const idx = ws.getCell('B11'); idx.value = '📋  CONTAINS: Customer List | Supplier List';
+  idx.style = { font: { italic: true, size: 9, name: 'Calibri', color: { argb: 'FF' + C.midBlue } }, alignment: { horizontal: 'center' } };
+  if (data.warnings && data.warnings.length) {
+    ws.mergeCells('B12:D12');
+    const wc = ws.getCell('B12'); wc.value = `⚠️ ${data.warnings.length} warning(s) — some modules may not be accessible. Check with your ERPNext administrator.`;
+    wc.style = { font: { italic: true, size: 9, color: { argb: 'FF' + C.orange } }, alignment: { horizontal: 'center' } };
+  }
+}
+
+function erpBuildCustomerList(wb, customers) {
+  const ws = wb.addWorksheet('🏢 Customers', { properties: { tabColor: { argb: 'FF' + C.darkBlue } } });
+  addSheetHeader(ws, '🏢 Customer List', 'All Customers from ERPNext', 7);
+  setColWidths(ws, [32, 16, 20, 18, 16, 28, 14]);
+  const hRow = ws.getRow(4);
+  ['Customer Name', 'Type', 'Group', 'Territory', 'Phone', 'Email', 'Last Modified'].forEach((h, i) => { hRow.getCell(i + 1).value = h; hRow.getCell(i + 1).style = headerStyle(C.darkBlue); });
+  hRow.height = 20; freezeRow(ws, 4);
+  if (!customers.length) { ws.getRow(5).getCell(1).value = 'No customer data found.'; return; }
+  customers.forEach((c, i) => {
+    const row = ws.getRow(5 + i); const bg = i % 2 === 0 ? C.white : C.altRow;
+    row.getCell(1).value = c.name;         row.getCell(1).style = cellStyle(bg, true);
+    row.getCell(2).value = c.type;         row.getCell(2).style = cellStyle(bg, false, 'center');
+    row.getCell(3).value = c.group;        row.getCell(3).style = cellStyle(bg);
+    row.getCell(4).value = c.territory;    row.getCell(4).style = cellStyle(bg);
+    row.getCell(5).value = c.phone;        row.getCell(5).style = cellStyle(bg);
+    row.getCell(6).value = c.email;        row.getCell(6).style = cellStyle(bg);
+    row.getCell(7).value = c.lastModified; row.getCell(7).style = cellStyle(bg, false, 'center');
+    row.height = 18;
+  });
+}
+
+function erpBuildSupplierList(wb, suppliers) {
+  const ws = wb.addWorksheet('🚚 Suppliers', { properties: { tabColor: { argb: 'FF' + C.midBlue } } });
+  addSheetHeader(ws, '🚚 Supplier List', 'All Suppliers from ERPNext', 7);
+  setColWidths(ws, [32, 16, 20, 18, 16, 28, 14]);
+  const hRow = ws.getRow(4);
+  ['Supplier Name', 'Type', 'Group', 'Country', 'Phone', 'Email', 'Last Modified'].forEach((h, i) => { hRow.getCell(i + 1).value = h; hRow.getCell(i + 1).style = headerStyle(C.midBlue); });
+  hRow.height = 20; freezeRow(ws, 4);
+  if (!suppliers.length) { ws.getRow(5).getCell(1).value = 'No supplier data found.'; return; }
+  suppliers.forEach((s, i) => {
+    const row = ws.getRow(5 + i); const bg = i % 2 === 0 ? C.white : C.altRow;
+    row.getCell(1).value = s.name;         row.getCell(1).style = cellStyle(bg, true);
+    row.getCell(2).value = s.type;         row.getCell(2).style = cellStyle(bg, false, 'center');
+    row.getCell(3).value = s.group;        row.getCell(3).style = cellStyle(bg);
+    row.getCell(4).value = s.country;      row.getCell(4).style = cellStyle(bg);
+    row.getCell(5).value = s.phone;        row.getCell(5).style = cellStyle(bg);
+    row.getCell(6).value = s.email;        row.getCell(6).style = cellStyle(bg);
+    row.getCell(7).value = s.lastModified; row.getCell(7).style = cellStyle(bg, false, 'center');
+    row.height = 18;
+  });
 }
 
 // ── RAW DATA SHEET ────────────────────────────────────────────
