@@ -701,11 +701,13 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
   }
 
   // ── FULL CRM REPORT (default) ─────────────────────────────────
+  const fullWarnings = [];
+  const emptyList = { data: { data: [] } };
   const [leadsRes, oppsRes, contactsRes, tasksRes] = await Promise.all([
-    axios.get(`${base}/api/resource/Lead?fields=["name","lead_name","email_id","mobile_no","company_name","status","modified"]&limit=100`, { headers: authHeaders }),
-    axios.get(`${base}/api/resource/Opportunity?fields=["name","opportunity_from","opportunity_type","status","expected_closing","opportunity_amount","probability"]&limit=100`, { headers: authHeaders }),
-    axios.get(`${base}/api/resource/Contact?fields=["name","first_name","last_name","email_id","mobile_no","company_name","designation","modified"]&limit=100`, { headers: authHeaders }),
-    axios.get(`${base}/api/resource/Task?fields=["name","subject","status","exp_end_date","task_weight"]&limit=100`, { headers: authHeaders }),
+    safeGet('Leads',    axios.get(`${base}/api/resource/Lead?fields=["name","lead_name","email_id","mobile_no","company_name","status","modified"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Opportunities', axios.get(`${base}/api/resource/Opportunity?fields=["name","opportunity_from","opportunity_type","status","expected_closing","opportunity_amount","probability"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Contacts', axios.get(`${base}/api/resource/Contact?fields=["name","first_name","last_name","email_id","mobile_no","company_name","designation","modified"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
+    safeGet('Tasks',    axios.get(`${base}/api/resource/Task?fields=["name","subject","status","exp_end_date","task_weight"]&limit=100`, { headers: authHeaders }), emptyList, fullWarnings),
   ]);
 
   const leads    = leadsRes.data.data    || [];
@@ -738,7 +740,7 @@ async function fetchERPNext(url, username, password, reportType, fiscalYear) {
   const closingSoon   = pipeline.filter(d=>{ if(!d.closeDate)return false; const days=(new Date(d.closeDate)-new Date())/86400000; return days>=0&&days<=30;}).length;
   const wonThisMonth  = wonDeals.filter(d=>{ if(!d.closeDate)return false; const cd=new Date(d.closeDate); const now=new Date(); return cd.getMonth()===now.getMonth()&&cd.getFullYear()===now.getFullYear();}).length;
 
-  return { crmName:'ERPNext', reportType:'full', warnings, kpis:{totalPipeline,openDeals,closingSoon,wonThisMonth}, pipeline, leads:leadList, contacts:contactList, activities:actList, wonLost:[...wonDeals,...lostDeals] };
+  return { crmName:'ERPNext', reportType:'full', warnings:[...warnings,...fullWarnings], kpis:{totalPipeline,openDeals,closingSoon,wonThisMonth}, pipeline, leads:leadList, contacts:contactList, activities:actList, wonLost:[...wonDeals,...lostDeals] };
 }
 
 async function fetchSalesforce(instanceUrl, accessToken, reportType) {
