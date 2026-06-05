@@ -89,6 +89,13 @@ function toStdDate(val) {
 function fmtDate() {
   return toStdDate(new Date());
 }
+// MM YYYY display for month aggregates — e.g. "2026-01" → "01 2026"
+function toMonthDisplay(monthKey) {
+  if (!monthKey || monthKey.length < 7) return monthKey || '';
+  const mm = monthKey.substring(5, 7);
+  const yyyy = monthKey.substring(0, 4);
+  return `${mm} ${yyyy}`;
+}
 function setColWidths(sheet, widths) {
   widths.forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
 }
@@ -1104,7 +1111,7 @@ function erpBuildSalesSummary(wb, data) {
   const yr = data.periodYear;
   const now = new Date();
   const periodEnd = data.toDate ? toStdDate(data.toDate) : (yr && yr >= now.getFullYear() ? toStdDate(now) : toStdDate(`${yr}-12-31`));
-  const periodLabel = yr ? `01 Jan ${yr} – ${periodEnd}` : (months.length ? `${months[0]} to ${months[months.length-1]}` : fmtDate());
+  const periodLabel = yr ? `01 01 ${yr} – ${periodEnd}` : (months.length ? `${toMonthDisplay(months[0])} to ${toMonthDisplay(months[months.length-1])}` : fmtDate());
 
   const ws = wb.addWorksheet('📊 Summary', { properties:{ tabColor:{ argb:'FF'+C.darkBlue } } });
   ws.views=[{showGridLines:false}]; setColWidths(ws,[3,36,26,26,3]);
@@ -1156,7 +1163,7 @@ function erpBuildMonthWise(wb, rows) {
   let totalRev=0;
   sorted.forEach((m,i)=>{
     const row=ws.getRow(5+i); const bg=i%2===0?C.white:C.altRow;
-    row.getCell(1).value=m.month;         row.getCell(1).style=cellStyle(bg,true,'center');
+    row.getCell(1).value=toMonthDisplay(m.month); row.getCell(1).style=cellStyle(bg,true,'center');
     row.getCell(2).value=m.invoices.size; row.getCell(2).style=cellStyle(bg,false,'center');
     row.getCell(3).value=m.customers.size;row.getCell(3).style=cellStyle(bg,false,'center');
     row.getCell(4).value=m.qty;           row.getCell(4).style={...cellStyle(bg,false,'right'),numFmt:'#,##0.00'};
@@ -1309,7 +1316,7 @@ function erpBuildPivot(wb, rows) {
   hRow.height=22; freezeRow(ws,4);
   months.forEach((m,i)=>{
     const row=ws.getRow(5+i); const bg=i%2===0?C.white:C.altRow;
-    row.getCell(1).value=m; row.getCell(1).style=cellStyle(bg,true,'center');
+    row.getCell(1).value=toMonthDisplay(m); row.getCell(1).style=cellStyle(bg,true,'center');
     brands.forEach((b,j)=>{
       const v=(matrix[m]||{})[b]||0;
       row.getCell(j+2).value=v||null;
@@ -1337,7 +1344,7 @@ function erpBuildSPMonthWise(wb, rows) {
   sorted.forEach((r,i)=>{
     const row=ws.getRow(5+i); const bg=i%2===0?C.white:C.altRow;
     row.getCell(1).value=r.sp;             row.getCell(1).style=cellStyle(bg,true);
-    row.getCell(2).value=r.month;          row.getCell(2).style=cellStyle(bg,false,'center');
+    row.getCell(2).value=toMonthDisplay(r.month); row.getCell(2).style=cellStyle(bg,false,'center');
     row.getCell(3).value=r.invoices.size;  row.getCell(3).style=cellStyle(bg,false,'center');
     row.getCell(4).value=r.amount;         row.getCell(4).style={...cellStyle(bg,false,'right'),numFmt:'#,##0.00'};
     row.height=18;
