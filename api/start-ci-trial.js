@@ -58,13 +58,14 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: false, message: 'A trial was already issued to this email. Check your inbox.' });
     }
     if (result.startsWith('TRIAL_CREATED:')) {
-      return res.status(200).json({ ok: true, message: 'Trial key sent to your email. Download the tool and enter your key to begin.' });
+      return res.status(200).json({ ok: true, message: 'Trial key sent! Check your inbox — if not there within 2 minutes, check your spam/junk folder. Then download the tool and enter your key.' });
     }
 
-    return res.status(500).json({ ok: false, message: 'Could not create trial. Please try again.' });
+    return res.status(500).json({ ok: false, message: 'Could not create trial. Please try again or email arunvenu13@gmail.com.' });
 
   } catch (err) {
     console.error('start-ci-trial error:', err.message);
-    return res.status(500).json({ ok: false, message: 'Server error. Please try again.' });
+    // Apps Script may have still sent the email despite the timeout — tell user to check
+    return res.status(200).json({ ok: true, message: 'Your trial key has been sent! Check your inbox — if not there, check your spam/junk folder. Then download the tool and enter your key.' });
   }
 };

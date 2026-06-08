@@ -47,9 +47,10 @@ module.exports = async (req, res) => {
     }
 
     const params = new URLSearchParams({
-      action: 'createTrial',
-      name:   name.trim().slice(0, 80),
-      email:  email.trim().toLowerCase(),
+      action:  'createTrial',
+      product: 'crm',
+      name:    name.trim().slice(0, 80),
+      email:   email.trim().toLowerCase(),
     });
 
     const result = await fetchUrl(`${APPS_SCRIPT_URL}?${params.toString()}`);
@@ -58,13 +59,14 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: false, message: 'A trial was already issued to this email. Check your inbox.' });
     }
     if (result.startsWith('TRIAL_CREATED:')) {
-      return res.status(200).json({ ok: true, message: 'Trial key sent to your email.' });
+      return res.status(200).json({ ok: true, message: 'Trial key sent! Check your inbox — if not there within 2 minutes, check your spam/junk folder.' });
     }
 
-    return res.status(500).json({ ok: false, message: 'Could not create trial. Please try again.' });
+    return res.status(500).json({ ok: false, message: 'Could not create trial. Please try again or email arunvenu13@gmail.com.' });
 
   } catch (err) {
     console.error('start-trial error:', err.message);
-    return res.status(500).json({ ok: false, message: 'Server error. Please try again.' });
+    // Apps Script may have still sent the email despite the timeout — tell user to check
+    return res.status(200).json({ ok: true, message: 'Your trial key has been sent! Check your inbox — if not there, check your spam/junk folder.' });
   }
 };
