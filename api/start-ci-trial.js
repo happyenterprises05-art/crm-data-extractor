@@ -5,6 +5,7 @@
 // ============================================================
 
 const https = require('https');
+const { reportError } = require('./report-error');
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRGFMHPNCJW-tcYNr99jBiVCyPOai8Qli5vtwcAIE9HVYJ3gTgb7l-Zwi08ZMIXdDXSA/exec';
 
@@ -61,10 +62,12 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, message: 'Trial key sent! Check your inbox — if not there within 2 minutes, check your spam/junk folder. Then download the tool and enter your key.' });
     }
 
+    reportError({ product: 'Contact Intelligence', version: 'v2.0', message: `Trial unexpected response: ${result}`, key: '', crm: '', extra: 'start-ci-trial' }).catch(() => {});
     return res.status(500).json({ ok: false, message: 'Could not create trial. Please try again or email arunvenu13@gmail.com.' });
 
   } catch (err) {
     console.error('start-ci-trial error:', err.message);
+    reportError({ product: 'Contact Intelligence', version: 'v2.0', message: `Trial catch: ${err.message}`, key: '', crm: '', extra: 'start-ci-trial' }).catch(() => {});
     // Apps Script may have still sent the email despite the timeout — tell user to check
     return res.status(200).json({ ok: true, message: 'Your trial key has been sent! Check your inbox — if not there, check your spam/junk folder. Then download the tool and enter your key.' });
   }
