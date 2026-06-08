@@ -58,7 +58,7 @@ module.exports = async (req, res) => {
     if (result === 'ALREADY_EXISTS') {
       return res.status(200).json({ ok: false, message: 'A trial was already issued to this email. Check your inbox.' });
     }
-    if (result.startsWith('TRIAL_CREATED:')) {
+    if (result.startsWith('TRIAL:')) {
       return res.status(200).json({ ok: true, message: 'Trial key sent! Check your inbox — if not there within 2 minutes, check your spam/junk folder.' });
     }
 
